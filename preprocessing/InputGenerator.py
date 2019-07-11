@@ -3,7 +3,7 @@ import json
 import itertools
 import math
 import numpy as np
-import create_data
+import utils
 
 
 class InputGenerator(object):
@@ -26,8 +26,8 @@ class InputGenerator(object):
         self.actionshistory = self.actionshistory.reset_index()
         self.actionshistory = self.actionshistory.rename(columns={'index': 'task_name'})
         # Get the unique exit codes and sites
-        self.good_codes, self.bad_codes = create_data.get_exit_codes(self.actionshistory)
-        self.good_sites, self.bad_sites = create_data.get_sites(self.actionshistory)
+        self.good_codes, self.bad_codes = utils.get_exit_codes(self.actionshistory)
+        self.good_sites, self.bad_sites = utils.get_sites(self.actionshistory)
         self.unique_sites = list(set(self.good_sites + self.bad_sites)) 
         self.unique_codes = list(set(self.good_codes + self.bad_codes))
         self.unique_codes = sorted(self.unique_codes, key=lambda x: float(x))
@@ -36,7 +36,7 @@ class InputGenerator(object):
     def set_labels(self):
         
         # Set the labels
-        create_data.set_labels(self.actionshistory)        
+        utils.set_labels(self.actionshistory)        
     
     def build_table(self, errors, sites, codes):
 
