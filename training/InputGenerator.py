@@ -116,7 +116,7 @@ class InputGenerator(object):
         
         self.sites, self.codes = self.list_to_index(self.unique_sites, self.unique_codes)
         self.error_site_tokens = np.zeros((self.batch_size, len(self.codes), len(self.sites), self.dim_tokens))
-        self.error_site_counts = np.zeros((self.batch_size, len(self.codes), len(self.sites)))
+        self.error_site_counts = np.zeros((self.batch_size, len(self.codes), len(self.sites), 2))
         labels = self.actionshistory['action_binary_encoded'].iloc[start_pos : end_pos].values
         #tokens_table = self.actionshistory.iloc[start_pos : end_pos].apply(self.build_table_tokens, axis=1)
         self.actionshistory.iloc[start_pos : end_pos].apply(self.build_table_tokens, axis=1)
@@ -126,17 +126,7 @@ class InputGenerator(object):
         return self.error_site_tokens, self.error_site_counts, labels
  
     
-    
-
-    def build_table_counts(self, row):
-        errors = row['errors']
-        index = row['unique_index']
-        index_matrix = index % 100
-        
-        sites_good = errors['good_sites'] 
-        sites_bad = errors['bad_sites']
-        
-        sites = {**sites_good, **sites_bad}
+    def fill_counts( self, index_matrix, sites, site_state ):
         
         if len(sites.keys()) == 0 or len(sites.values()) == 0:
             return 
@@ -149,7 +139,19 @@ class InputGenerator(object):
                     continue
                
                 site = site.encode('utf-8')
-                self.error_site_counts[index_matrix, self.codes[exit_code], self.sites[site]] = 0 if math.isnan(count) else count
+                self.error_site_counts[index_matrix, self.codes[exit_code], self.sites[site]] = [ count , site_state ]    
+                print (index_matrix, self.codes[exit_code], self.sites[site], count , site_state)
+
+    def build_table_counts(self, row):
+        errors = row['errors']
+        index = row['unique_index']
+        index_matrix = index % 100
+        
+        sites_good = errors['good_sites'] 
+        sites_bad = errors['bad_sites']
+        
+        self.fill_counts(index_matrix, sites_good, 1)
+        self.fill_counts(index_matrix, sites_bad, 2)
 
         
         
