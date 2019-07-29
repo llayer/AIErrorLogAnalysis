@@ -25,12 +25,12 @@ import keras
 from tqdm import tqdm
 import copy
 
-from utils.model_utils import DataPlaceholder, get_class_weights, \
+from model_utils import DataPlaceholder, get_class_weights, \
                               imblearn_sample, PredictDataCallback
-from utils.model_utils import MultipleMetricsEarlyStopping
-from utils.metrics import normalized_confusion_matrix_and_identity_mse as confusion_mse
-from utils.metrics import accuracy, weighted_accuracy, recall, precision
-from utils.skopt_utils import get_best_params, create_skopt_results_string
+from model_utils import MultipleMetricsEarlyStopping
+from metrics import accuracy, weighted_accuracy, recall, precision
+from metrics import normalized_confusion_matrix_and_identity_mse as confusion_mse
+from skopt_utils import get_best_params, create_skopt_results_string
 
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
@@ -40,6 +40,7 @@ from skopt.utils import use_named_args
 
 
 class Model():
+    
     def __init__(self):
         self.model = None
         self.num_classes = None
@@ -71,23 +72,6 @@ class Model():
                use_imblearn=False, imblearn_class=SMOTE(random_state=42, ratio=1.0), # imblearn vars
                early_stopping_callback='default', test_split=0.2, # early stopping vars
                testing=False, kfold_function=KFold, kfold_splits=5, ): # testing vars (returns predictions from kfold)
-        ''' trains self.model w/ selected parameters
-        @param X w/ shape (num_examples,num_error,num_sites) - where each number is integer of number of errors happened at that site
-        @param Y w/ shape (num_examples,) - where each number is integer that represents one class
-        @param max_epochs - maximum learning epochs, if not using kfold to approximate num_epochs: then this is num_epochs used for training
-        @param batch_size - neural network parameter
-        @param seed - random seed that is used everywhere for reproducability
-        @param verbose - if 0: no print output, else: print output
-        @param use_imblearn - boolean that decides to use resampling for training or not
-        @param imblearn_class - class from iblearn library used for resampling (doesn't do anything if use_imblearn = False)
-        @param early_stopping_callback - early stopping keras callback used to find num_epochs
-        @param test_split - test split used for early stopping
-        @param testing - if True: stops training after cross validation and returns predictions of all data across all kfolds
-        @param kfold_function - cross validation function from sklearn library (doesn't do anything if testing == False)
-        @param kfold_splits - number of cross validation splits, used in kfold_function (doesn't do anything if testing == False) 
-        return if not testing: return keras history.history dict
-               else : list of len = kfold_splits, where each element is keras history.history dict
-        '''
 
         data = DataPlaceholder()
 
@@ -109,7 +93,7 @@ class Model():
                                     PredictDataCallback(self.model, data.val.x  , data.val.y  , 'val_') ]
                 history = self.model.fit( x = data.train.x, y = data.train.y,
                                           validation_data = (data.val.x, data.val.y),
-                                          epochs = max_epochs, batch_size = batch_size,
+                                          nb_epoch = max_epochs, batch_size = batch_size,
                                           callbacks = [] + keras_callbacks,
                                           verbose = verbose )
                 histories.append( history.history )
