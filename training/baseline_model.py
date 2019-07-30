@@ -7,6 +7,7 @@ from base_model import BaseModel
 from utils_train.losses import weighted_categorical_crossentropy
 from utils_train.model_utils import get_class_weights
 
+from utils_train.metrics import accuracy, weighted_accuracy, recall, precision, roc_auc
 
 class FF(BaseModel):
     
@@ -38,13 +39,13 @@ class FF(BaseModel):
                        kernel_regularizer=keras.regularizers.l2(regulizer_value) )(m)
             m = Dropout(dropout_value)(m)
 
-        m_output = Dense( units=self.num_classes, activation='softmax', 
+        m_output = Dense( units=1, activation='sigmoid', 
                           kernel_initializer='lecun_normal',
                           kernel_regularizer=keras.regularizers.l2(regulizer_value) )(m)
         
         self.model = keras.models.Model(inputs=m_input, outputs=m_output)
-        self.model.compile( loss = weighted_categorical_crossentropy(self.class_weights),
-                            optimizer = keras.optimizers.Adam(lr=learning_rate) )
+        self.model.compile( loss = 'binary_crossentropy',
+                            optimizer = keras.optimizers.Adam(lr=learning_rate), metrics = ['accuracy'])
         
 
 

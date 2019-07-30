@@ -27,7 +27,6 @@ class InputGenerator(object):
         # Reset index
         self.actionshistory = self.actionshistory.reset_index()
         self.actionshistory = self.actionshistory.rename(columns={'index': 'task_name'})
-        self.actionshistory['unique_index'] = self.actionshistory.index
         # Get the unique exit codes and sites
         self.good_codes, self.bad_codes = ut.get_exit_codes(self.actionshistory)
         self.good_sites, self.bad_sites = ut.get_sites(self.actionshistory)

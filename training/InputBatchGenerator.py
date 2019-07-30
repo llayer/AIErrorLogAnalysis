@@ -10,6 +10,7 @@ class InputBatchGenerator(object):
     def __init__(self, frame, label, codes, sites, dim_msg, batch_size = None, msg = 'tokens'):
         
         self.frame = frame
+        self.frame['unique_index'] = self.frame.reset_index().index
         self.n_tasks = len(frame)
         self.label = label
         self.batch_size = batch_size
@@ -36,7 +37,7 @@ class InputBatchGenerator(object):
                     continue
                
                 site = site.encode('utf-8')
-                self.error_site_counts[index_matrix, self.codes[exit_code], self.sites[site], site_state] = count   
+                self.error_site_counts[index_matrix, self.codes[exit_code], self.sites[site], site_state] += count   
                 #print (index_matrix, self.codes[exit_code], self.sites[site], count , site_state)
 
                 
@@ -122,7 +123,9 @@ class InputBatchGenerator(object):
     
     def count_matrix(self):
         
-        self.error_site_counts = np.zeros((self.n_tasks, len(self.codes), len(self.sites), 2))
+        n_sites = len(list(set(self.sites.values())))
+        
+        self.error_site_counts = np.zeros((self.n_tasks, len(self.codes), n_sites, 2))
         self.frame.apply(self.build_table_counts, axis=1)
         return self.error_site_counts, self.frame[self.label]  
     

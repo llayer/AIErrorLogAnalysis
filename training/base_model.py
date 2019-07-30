@@ -7,8 +7,8 @@ from tqdm import tqdm
 import copy
 
 from utils_train.model_utils import DataPlaceholder, get_class_weights, PredictDataCallback
-from utils_train.model_utils import MultipleMetricsEarlyStopping
-from utils_train.metrics import accuracy, weighted_accuracy, recall, precision
+from utils_train.model_utils import MultipleMetricsEarlyStopping, EarlyStopping
+from utils_train.metrics import accuracy, weighted_accuracy, recall, precision, roc_auc
 from utils_train.metrics import normalized_confusion_matrix_and_identity_mse as confusion_mse
 from utils_train.skopt_utils import get_best_params, create_skopt_results_string
 
@@ -16,7 +16,40 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, StratifiedKFold
 from skopt import gp_minimize
 from skopt.utils import use_named_args
-from keras.callbacks import EarlyStopping
+#from keras.callbacks import EarlyStopping
+
+from sklearn.metrics import roc_auc_score
+from keras.callbacks import Callback
+class roc_callback(Callback):
+    def __init__(self,training_data,validation_data):
+        self.x = training_data[0]
+        self.y = training_data[1]
+        self.x_val = validation_data[0]
+        self.y_val = validation_data[1]
+
+
+    def on_train_begin(self, logs={}):
+        return
+
+    def on_train_end(self, logs={}):
+        return
+
+    def on_epoch_begin(self, epoch, logs={}):
+        return
+
+    def on_epoch_end(self, epoch, logs={}):
+        y_pred = self.model.predict(self.x)
+        roc = roc_auc_score(self.y, y_pred)
+        y_pred_val = self.model.predict(self.x_val)
+        roc_val = roc_auc_score(self.y_val, y_pred_val)
+        print('\rroc-auc: %s - roc-auc_val: %s' % (str(round(roc,4)),str(round(roc_val,4))),end=100*' '+'\n')
+        return
+
+    def on_batch_begin(self, batch, logs={}):
+        return
+
+    def on_batch_end(self, batch, logs={}):
+        return
 
 
 class BaseModel():
@@ -93,7 +126,7 @@ class BaseModel():
             
             print( 'Set early stopping' )
             
-            es = EarlyStopping(monitor='val_loss', mode='min', verbose=1)
+            es = EarlyStopping( roc_auc(), 5 )
             keras_callbacks.append(es)
             
             """
@@ -107,6 +140,10 @@ class BaseModel():
         self.model.summary() 
         print(X_train.shape)
         print(X_val.shape)
+        
+        
+        #keras_callbacks.append( roc_callback(training_data=(X_train, y_train),validation_data=(X_val, y_val)))
+        
         print( keras_callbacks )
         
         history = self.model.fit( X_train, y_train, validation_data = (X_val, y_val), \
@@ -124,7 +161,7 @@ class BaseModel():
           
                                                
 
-    def find_optimal_parameters( self, X_train, y_train, X_test, y_test, num_calls=12, evaluation_function=confusion_mse(), \
+    def find_optimal_parameters( self, X_train, y_train, X_test, y_test, num_calls=12, evaluation_function=roc_auc(), \
                                  max_epochs=100, batch_size=256, \
                                  early_stopping_callback='default', \
                                  seed=42, verbose=1, summary_txt_path=None ): 
@@ -142,7 +179,8 @@ class BaseModel():
             print(p)
             self.model_params = p
 
-            early_stopping_callback = EarlyStopping(monitor='val_loss', mode='min', verbose=1)
+            early_stopping_callback = EarlyStopping( roc_auc(), 5 )
+            #early_stopping_callback = EarlyStopping(monitor='val_loss', mode='min', verbose=1)
             
             self.train( X_train, y_train, X_test, y_test, max_epochs=max_epochs, batch_size=batch_size,  
                         early_stopping_callback=copy.deepcopy(early_stopping_callback), early_stopping = True, 
