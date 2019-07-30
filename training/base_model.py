@@ -48,14 +48,20 @@ class BaseModel():
         pass
 
     
-    def train_on_batch(self, training_generator, validation_generator, early_stopping_callback='default', early_stopping=False):
+    def train_on_batch(self, training_generator, validation_generator, \
+                       epochs = 100, steps_per_epoch = 100, validation_steps = 100,  \
+                       early_stopping_callback='default', early_stopping=False):
         
-        self.class_weights = get_class_weights(data.train.y, self.num_classes)
+        #self.class_weights = get_class_weights(data.train.y, self.num_classes)
         self.create_model(**self.model_params)
-            
+        
+        self.print_summary()
+        
+        """
         keras_callbacks = [ PredictDataCallback(self.model, X_train, y_train, ''),
                             PredictDataCallback(self.model, X_val  , y_val  , 'val_') ]
-
+        """
+        
         if early_stopping == True:
             
             if early_stopping_callback == 'default':
@@ -63,8 +69,11 @@ class BaseModel():
                 modes = ['min', 'max', 'max']
                 early_stopping_callback = MultipleMetricsEarlyStopping(early_stopping_functions, modes=modes)
                 kears_callbacks.append(early_stopping_callback)    
-                
-        history = self.model.fit_generator(generator=training_generator, validation_data=validation_generator)
+        
+        history = self.model.fit_generator(generator=training_generator.gen_inf_count_msg_batches(), \
+                                           steps_per_epoch = steps_per_epoch, validation_steps = validation_steps, \
+                                           validation_data=validation_generator.gen_inf_count_msg_batches(), 
+                                           use_multiprocessing = True)
 
         return history.history           
         

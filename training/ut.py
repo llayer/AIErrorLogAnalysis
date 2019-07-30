@@ -220,27 +220,7 @@ def get_zero_sites(frame, ignore_neg_code = False):
     
     return counts_errors, counts_site
     
-    """
-    non_zero_keys = frame.apply(lambda x: map_to_key(x, ignore_neg_code = True), axis = 1).to_frame('key')
-    all_keys = frame.apply(lambda x: map_to_key(x, ignore_neg_code = False), axis = 1).to_frame('key')
-    
-    keys_non_zero = non_zero_keys['key'].apply(pd.Series).unstack().reset_index(drop=True).dropna().to_frame('key')
-    keys_all = all_keys['key'].apply(pd.Series).unstack().reset_index(drop=True).dropna().to_frame('key')
-    
-    def expand_key(key):
-        return key[0], key[1], key[2]
-    
-    keys_non_zero['task_name'], keys_non_zero['error'], keys_non_zero['site'] = zip(*keys_non_zero['key'].map(expand_key))
-    keys_all['task_name'], keys_all['error'], keys_all['site'] = zip(*keys_all['key'].map(expand_key))
-    
-    counts_error_non_zero = keys_non_zero['error'].value_counts().rename_axis('error').reset_index(name='counts')
-    counts_site_non_zero = keys_non_zero['site'].value_counts().rename_axis('site').reset_index(name='counts')
-    
-    counts_errors_all = keys_all['error'].value_counts().rename_axis('error').reset_index(name='counts')
-    counts_site_all = keys_all['site'].value_counts().rename_axis('site').reset_index(name='counts')
-    
-    return counts_error_non_zero, counts_site_non_zero, counts_errors_all, counts_site_all
-    """
+
         
         
         

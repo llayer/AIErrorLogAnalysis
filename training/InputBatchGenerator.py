@@ -7,7 +7,7 @@ import numpy as np
 
 class InputBatchGenerator(object):
     
-    def __init__(self, frame, label, batch_size, codes, sites, dim_msg, msg = 'tokens'):
+    def __init__(self, frame, label, codes, sites, dim_msg, batch_size = None, msg = 'tokens'):
         
         self.frame = frame
         self.n_tasks = len(frame)
@@ -48,7 +48,11 @@ class InputBatchGenerator(object):
         
         errors = row['errors']
         index = row['unique_index']
-        index_matrix = index % self.batch_size
+        
+        if self.batch_size is not None:
+            index_matrix = index % self.batch_size
+        else:
+            index_matrix = index
         
         sites_good = errors['good_sites'] 
         sites_bad = errors['bad_sites']
@@ -92,19 +96,28 @@ class InputBatchGenerator(object):
         self.frame.iloc[start_pos : end_pos].apply(self.build_table_msg, axis=1)
         self.frame.iloc[start_pos : end_pos].apply(self.build_table_msg, axis=1)
         
-        return (self.error_site_tokens, self.error_site_counts)       
+        return [self.error_site_tokens, self.error_site_counts]     
     
     
-    def generate_msg_count_batches(self):
+    def gen_msg_count_batches(self):
         
         for cur_pos in range(0, self.n_tasks, self.batch_size):
  
             next_pos = cur_pos + self.batch_size 
-            if next_pos <= n_tasks:
-                yield ( self.msg_count_batch( cur_pos, next_pos ), self.labels.iloc[cur_pos : next_pos].values )
+            if next_pos <= self.n_tasks:
+                yield ( self.msg_count_batch( cur_pos, next_pos ), self.frame[self.label].iloc[cur_pos : next_pos].values )
             else:
-                yield ( self.msg_count_batch( cur_pos, n_tasks ), self.labels.iloc[cur_pos : n_tasks].values )   
+                yield ( self.msg_count_batch( cur_pos, n_tasks ), self.frame[self.label].iloc[cur_pos : n_tasks].values )   
                   
+    def gen_inf_count_msg_batches(self):
+        
+        while True:
+            try:
+                for B in self.gen_msg_count_batches():
+                    yield B
+            except StopIteration:
+                logging.warning("start over generator loop")
+            
     
     
     def count_matrix(self):

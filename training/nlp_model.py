@@ -22,13 +22,8 @@ class NLP_Model(BaseModel):
         self.num_classes = num_classes
         self.max_senten_num = num_error * num_sites
         self.model_params = {
-            'dense_layers':3,
-            'dense_units':50,
-            'regulizer_value':0.0015,
-            'dropout_value':0.015,
-            'learning_rate':1e-3,
+            'learning_rate':0.1
         }
-        self.learning_rate = 0.1
         
         
         
@@ -36,13 +31,13 @@ class NLP_Model(BaseModel):
         
         dims_embed = self.embedding_matrix.shape
         embedding = Embedding(dims_embed[0], dims_embed[1], weights=[self.embedding_matrix], \
-                              input_length = self.max_sequence_length, trainable = False)
+                              input_length = self.max_sequence_length, trainable = True)
     
         return embedding
     
     def word_encoder_model( self ):
         
-        word_input = Input(shape = (self.max_sequence_length, ))
+        word_input = Input(shape = (self.max_sequence_length, ), dtype='float32')
         word_sequences = self.get_embedding_layer()(word_input)
         word_lstm = LSTM(10)(word_sequences)
         wordEncoder = Model(word_input, word_lstm)
@@ -51,31 +46,37 @@ class NLP_Model(BaseModel):
     
     def site_encoder_model( self ):
         
-        exit_code_input = Input(shape=( self.num_error, 12, ))
+        exit_code_input = Input(shape=( self.num_sites, 12, ), dtype='float32')
         flattened = Flatten()(exit_code_input)
         dense = Dense(10, activation = "relu", kernel_initializer="normal")(flattened)
         site_encoder = Model(exit_code_input, dense)
         
         return site_encoder
     
-    def create_model( self ):
+    def create_model( self, learning_rate ):
         
         # Input layers
-        count_input = Input(shape = (self.max_senten_num, 2, ))
-        sent_input = Input(shape = (self.max_senten_num, self.max_sequence_length))
+        count_input = Input(shape = (self.num_error, self.num_sites, 2, ), dtype='float32')
+        sent_input = Input(shape = (self.num_error, self.num_sites, self.max_sequence_length), dtype='float32')
+        
+        # Reshape the matrix
+        sent_input_reshaped = Reshape(( self.num_error * self.num_sites , self.max_sequence_length))(sent_input)
         
         # Encode the words of the sentences
-        sent_encoder = TimeDistributed(self.word_encoder_model())(sent_input)
+        sent_encoder = TimeDistributed(self.word_encoder_model())(sent_input_reshaped)
+        
+        # Shape back to concat the matrix
+        sent_encoder_reshaped = Reshape(( self.num_error, self.num_sites , 10))(sent_encoder)
         
         # Merge the counts and words
-        merge_counts_words = Concatenate(axis=2)([sent_encoder, count_input])
+        merge_counts_words = Concatenate(axis=3)([sent_encoder_reshaped, count_input])
         
         # Reshape the tensor to wrap up the sites
-        reshape_sites_codes = Reshape(( self.num_error, self.num_sites , 12))
-        reshape = reshape_sites_codes(merge_counts_words)
+        #reshape_sites_codes = Reshape(( self.num_error, self.num_sites , 12))
+        #reshape = reshape_sites_codes(merge_counts_words)
         
-        # Encode the times 
-        exit_code_encoder = TimeDistributed(self.site_encoder_model())(reshape)
+        # Encode the sites 
+        exit_code_encoder = TimeDistributed(self.site_encoder_model())(merge_counts_words)
         
         # Flatten
         flattened = Flatten()(exit_code_encoder)
@@ -89,7 +90,7 @@ class NLP_Model(BaseModel):
         # Final model
         self.model = Model([sent_input, count_input], preds)
         self.model.compile( loss='binary_crossentropy',  #weighted_categorical_crossentropy(self.class_weights), \
-                                    optimizer = Adam(lr=self.learning_rate) )
+                                    optimizer = Adam(lr = learning_rate) )
         
         return self.model
     
@@ -109,7 +110,7 @@ class NLP_Model(BaseModel):
         print()
         
         print( 'Full model' )
-        model = self.create_model()
+        model = self.model
         model.summary()
         print()
         print()
