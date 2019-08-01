@@ -16,22 +16,17 @@ class FF(BaseModel):
         self.num_error = num_error
         self.num_sites = num_sites
         self.num_classes = num_classes
-        self.dense_layers = 3
-        self.dense_units = 20
+        #self.dense_units = 20
         self.regulizer_value = 0.0015
         self.dropout_value = 0.015
         self.model_params = {
-            """
-            'dense_layers':3,
-            'dense_units':50,
-            'regulizer_value':0.0015,
-            'dropout_value':0.015,
-            """
-            'learning_rate':1e-2,
+            'learning_rate':1e-3,
+            'dense_units':20,
+            'dense_layers' : 3
         }
 
 
-    def create_model( self, learning_rate ): # dense_layers, dense_units, regulizer_value, dropout_value, learning_rate ):
+    def create_model( self, learning_rate, dense_units, dense_layers ): # dense_layers, dense_units, regulizer_value, dropout_value, learning_rate ):
 
         #m_input = Input((self.num_error,self.num_sites, 2))
         m_input = Input((self.num_error,self.num_sites))
@@ -39,8 +34,8 @@ class FF(BaseModel):
         m = m_input
 
         m = Flatten()(m)
-        for _ in range(self.dense_layers):
-            m = Dense( units=self.dense_units, activation='relu', 
+        for _ in range(dense_layers):
+            m = Dense( units=dense_units, activation='relu', 
                        kernel_initializer='lecun_normal',
                        kernel_regularizer=keras.regularizers.l2(self.regulizer_value) )(m)
             m = Dropout(self.dropout_value)(m)
@@ -62,7 +57,9 @@ class FF(BaseModel):
     def set_skopt_dimensions(self):
 
         self.dimensions = [
-            Real(        low=1e-3, high=1e-1, prior='log-uniform', name='learning_rate'     )
+            Real(        low=1e-3, high=1e-1, prior='log-uniform', name='learning_rate'     ),
+            Integer(     low=10,    high=100,                        name='dense_units'       ),
+            Integer(     low=2,    high=6,                        name='dense_layers'      )
         ]
         
         """

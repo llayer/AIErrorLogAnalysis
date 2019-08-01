@@ -141,6 +141,35 @@ class BaseModel():
                                            use_multiprocessing = True)
 
         return history.history           
+       
+        
+        
+    def kfold_val(self, X, y, kfold_splits = 5, kfold_function=KFold, max_epochs=100, batch_size=256, seed=42, verbose=0, \
+              early_stopping_callback='default', early_stopping=False):
+        
+        enum = enumerate(kfold_function(n_splits=kfold_splits, shuffle=True, random_state=seed).split(X,y))
+        
+        if verbose != 0:
+            enum = tqdm(enum, total=kfold_splits, desc='kfold', leave=False, initial=0)
+            
+        cvscores = []
+        for i,(index_train, index_valid) in enum:
+            X_train, X_val = X[ index_train ], X[ index_valid ]
+            y_train, y_val = y[ index_train ], y[ index_valid ]
+            
+            self.train(X_train, y_train, X_val, y_val, max_epochs = max_epochs, 
+                             batch_size = batch_size, early_stopping = early_stopping)
+            
+            y_pred = self.predict(X_val,argmax=False)
+            score = roc_auc_score(y_val, y_pred)
+            cvscores.append(score)
+            
+        return cvscores
+        
+        
+        
+        
+        
         
     
     def train(self, X_train, y_train, X_val, y_val, max_epochs=100, batch_size=256, seed=42, verbose=0, \
@@ -148,7 +177,7 @@ class BaseModel():
 
         
             
-        self.class_weights = get_class_weights(y_train, self.num_classes)
+        #self.class_weights = get_class_weights(y_train, self.num_classes)
         self.create_model(**self.model_params)
             
         
@@ -158,7 +187,7 @@ class BaseModel():
         if early_stopping == True:
             
             print( 'Set early stopping' )
-            es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=3)
+            es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
             #es = EarlyStopping( roc_auc(), 5, 'max' )
             #keras_callbacks.append(es)
             
@@ -194,7 +223,7 @@ class BaseModel():
           
                                                
 
-    def find_optimal_parameters( self, X_train, y_train, X_test, y_test, num_calls=12, evaluation_function=roc_auc(), \
+    def find_optimal_parameters( self, X, y, kfold_splits, num_calls=12, evaluation_function=roc_auc(), \
                                  max_epochs=100, batch_size=256, \
                                  early_stopping_callback='default', \
                                  seed=42, verbose=1, summary_txt_path=None ): 
@@ -216,15 +245,20 @@ class BaseModel():
             #EarlyStopping( roc_auc(), 5 )
             #early_stopping_callback = EarlyStopping(monitor='val_loss', mode='min', verbose=1)
             
+            """
             self.train( X_train, y_train, X_test, y_test, max_epochs=max_epochs, batch_size=batch_size,  
                         early_stopping_callback=copy.deepcopy(early_stopping_callback), early_stopping = True, 
                         seed=seed, verbose=verbose )
-
+            
             y_pred = self.predict(X_test,argmax=False)
             y_test_cat = keras.utils.to_categorical(y_test)
             #result = evaluation_function(y_test_cat, y_pred)
-            result = -1 * roc_auc_score(y_test, y_pred)
-            if verbose != 0: print('Result: {}'.format(result))
+            result = -1 * roc_auc_score(y_test, y_pred
+            """
+            cvscores = self.kfold_val(X, y, kfold_splits=5, max_epochs = 200, batch_size = 100, early_stopping = True)
+            result = -1 * np.mean( cvscores )
+            print( result, np.std( cvscores ) )
+            #if verbose != 0: print('Result: {}'.format(result))
             self.num_skopt_call += 1
             return result
         

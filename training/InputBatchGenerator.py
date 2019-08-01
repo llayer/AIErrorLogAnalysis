@@ -118,8 +118,50 @@ class InputBatchGenerator(object):
                     yield B
             except StopIteration:
                 logging.warning("start over generator loop")
-            
     
+    
+    
+    
+           
+        
+    def build_table_msg_bin(self, row):
+
+        """
+        Fill the matrix batch with the error messages
+        """
+        
+        # Build the site-error-w2v matrix table
+        log_sites = row['site']
+        log_errors = row['error']
+        
+        if self.msg == 'tokens':
+            log_msg = row['tokens_padded']
+        elif self.msg == 'w2v_avg':
+            log_msg = row['w2v']
+            
+        index = row['unique_index']
+        if self.batch_size is not None:
+            index_matrix = index % self.batch_size
+        else:
+            index_matrix = index
+        
+        # Add word vectors
+        if isinstance(log_sites, (list,)):
+
+            for i in range(len(log_sites)):
+                if log_sites[i] == 'NoReportedSite':
+                    continue
+                                    
+                self.error_site_tokens_bin[index_matrix, self.codes[log_errors[i]], self.sites[log_sites[i]]] = 1  
+               
+    
+    
+    def binary_msg_matrix(self):
+        
+        self.error_site_tokens_bin = np.zeros((self.n_tasks, len(self.codes), len(self.sites)))
+        self.frame.apply(self.build_table_msg_bin, axis=1)
+        return self.error_site_tokens_bin
+                                          
     
     def count_matrix(self, sum_good_bad = False):
         
