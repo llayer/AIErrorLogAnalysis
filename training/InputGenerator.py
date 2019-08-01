@@ -49,11 +49,11 @@ class InputGenerator(object):
     
     def prune_error_sites(self, threshold_sites = 0, threshold_errors = 0, ignore_neg_code = False):
 
-        counts_errors, counts_sites = ut.get_zero_sites(self.actionshistory, ignore_neg_code) 
+        counts_errors, counts_sites, n_keys = ut.get_zero_sites(self.actionshistory, ignore_neg_code) 
         pruned_errors = counts_errors[counts_errors['counts'] > threshold_errors]
         pruned_sites = counts_sites[counts_sites['counts'] > threshold_sites]
 
-        return pruned_errors['error'].unique(), pruned_sites['site'].unique()
+        return pruned_errors['error'].unique(), pruned_sites['site'].unique(), n_keys
         
     
     def sites_to_tiers(self, sites):

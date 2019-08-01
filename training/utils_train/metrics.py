@@ -80,6 +80,7 @@ def precision(average='macro'):
     return metric
 
 
+"""
 def roc_auc(average='macro'):
     ''' returns roc auc
     @param average - 'micro' (dominant class is more important) (returns one number) or 
@@ -94,7 +95,12 @@ def roc_auc(average='macro'):
         y_pred = to_categorical(y_argmax, num_classes=num_classes)
         return roc_auc_score(y_true, y_pred, average=average)
     return metric
+"""
 
+def roc_auc():
+    def metric(y_true, y_pred):
+        return roc_auc_score(y_true, y_pred)
+    return metric    
 
 def f1(average='macro'):
     ''' returns f1 score

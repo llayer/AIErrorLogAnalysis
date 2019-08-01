@@ -16,35 +16,45 @@ class FF(BaseModel):
         self.num_error = num_error
         self.num_sites = num_sites
         self.num_classes = num_classes
+        self.dense_layers = 3
+        self.dense_units = 20
+        self.regulizer_value = 0.0015
+        self.dropout_value = 0.015
         self.model_params = {
+            """
             'dense_layers':3,
             'dense_units':50,
             'regulizer_value':0.0015,
             'dropout_value':0.015,
-            'learning_rate':1e-3,
+            """
+            'learning_rate':1e-2,
         }
 
 
-    def create_model( self, dense_layers, dense_units, regulizer_value, 
-                      dropout_value, learning_rate ):
+    def create_model( self, learning_rate ): # dense_layers, dense_units, regulizer_value, dropout_value, learning_rate ):
 
-        m_input = Input((self.num_error,self.num_sites, 2))
-        
+        #m_input = Input((self.num_error,self.num_sites, 2))
+        m_input = Input((self.num_error,self.num_sites))
+    
         m = m_input
 
         m = Flatten()(m)
-        for _ in range(dense_layers):
-            m = Dense( units=dense_units, activation='relu', 
+        for _ in range(self.dense_layers):
+            m = Dense( units=self.dense_units, activation='relu', 
                        kernel_initializer='lecun_normal',
-                       kernel_regularizer=keras.regularizers.l2(regulizer_value) )(m)
-            m = Dropout(dropout_value)(m)
+                       kernel_regularizer=keras.regularizers.l2(self.regulizer_value) )(m)
+            m = Dropout(self.dropout_value)(m)
+
+        #m_output = Dense( units=self.num_classes, activation='softmax', 
+        #                  kernel_initializer='lecun_normal',
+        #                  kernel_regularizer=keras.regularizers.l2(regulizer_value) )(m)
 
         m_output = Dense( units=1, activation='sigmoid', 
                           kernel_initializer='lecun_normal',
-                          kernel_regularizer=keras.regularizers.l2(regulizer_value) )(m)
+                          kernel_regularizer=keras.regularizers.l2(self.regulizer_value) )(m)
         
         self.model = keras.models.Model(inputs=m_input, outputs=m_output)
-        self.model.compile( loss = 'binary_crossentropy',
+        self.model.compile( loss = 'binary_crossentropy', #'categorical_crossentropy',
                             optimizer = keras.optimizers.Adam(lr=learning_rate), metrics = ['accuracy'])
         
 
@@ -52,11 +62,16 @@ class FF(BaseModel):
     def set_skopt_dimensions(self):
 
         self.dimensions = [
-            Integer(     low=1,    high=15,                        name='dense_layers'      ),
+            Real(        low=1e-3, high=1e-1, prior='log-uniform', name='learning_rate'     )
+        ]
+        
+        """
+        self.dimensions = [
+            Integer(     low=1,    high=5,                        name='dense_layers'      ),
             Integer(     low=5,    high=75,                        name='dense_units'       ),
             Real(        low=1e-3, high=0.9,  prior="log-uniform", name='regulizer_value'   ),
             Real(        low=0.01, high=0.5,                       name='dropout_value'     ),
-            Real(        low=1e-6, high=1e-2, prior='log-uniform', name='learning_rate'     )
+            Real(        low=1e-4, high=1e-1, prior='log-uniform', name='learning_rate'     )
         ]
-
+        """
 

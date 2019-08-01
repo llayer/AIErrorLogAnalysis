@@ -56,8 +56,17 @@ def test_count_matrix( gen, i_task ):
     for index in indices[0]:
         assert( test_matrix_gen[codes[index[0]], sites[index[1]], 0] == index[2] )
     for index in indices[1]:
-        assert( test_matrix_gen[codes[index[0]], sites[index[1]], 1] == index[2] )    
+        assert( test_matrix_gen[codes[index[0]], sites[index[1]], 1] == index[2] )  
+        
+    # Assert that the number of filled entries in the matrix are correct
+    codes, sites, keys = gen.prune_error_sites()
+    assert( np.count_nonzero(full_matrix_gen) == keys )
     
+    # Assert that the sites2tiers works properly
+    sites_T = gen.sites_to_tiers(gen.sites)
+    test_tier_gen = InputBatchGenerator.InputBatchGenerator(gen.actionshistory, 'action_binary_encoded', gen.codes, sites_T, gen.dim_msg)
+    matrix_T = test_tier_gen.count_matrix()
     
+    assert( full_matrix_gen.sum() == matrix_T.sum() )
     
     

@@ -215,10 +215,12 @@ def get_zero_sites(frame, ignore_neg_code = False):
     keys_unstacked = keys['key'].apply(pd.Series).unstack().reset_index(drop=True).dropna().to_frame('key')
     keys_unstacked['task_name'], keys_unstacked['error'], keys_unstacked['site'] = zip(*keys_unstacked['key'].map(expand_key))
 
+    n_keys = len(keys_unstacked)
+    
     counts_errors = keys_unstacked['error'].value_counts().rename_axis('error').reset_index(name='counts')
     counts_site = keys_unstacked['site'].value_counts().rename_axis('site').reset_index(name='counts')
     
-    return counts_errors, counts_site
+    return counts_errors, counts_site, n_keys
     
 
         

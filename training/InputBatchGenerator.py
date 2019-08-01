@@ -2,7 +2,7 @@ import pandas as pd
 import itertools
 import math
 import numpy as np
-
+from keras.utils import to_categorical
 
 
 class InputBatchGenerator(object):
@@ -33,8 +33,8 @@ class InputBatchGenerator(object):
             exit_code = exit_code.encode("utf-8")
             for site, count in site_dict.items():
         
-                if site == 'NoReportedSite':
-                    continue
+                #if site == 'NoReportedSite':
+                #    continue
                
                 site = site.encode('utf-8')
                 self.error_site_counts[index_matrix, self.codes[exit_code], self.sites[site], site_state] += count   
@@ -121,13 +121,17 @@ class InputBatchGenerator(object):
             
     
     
-    def count_matrix(self):
+    def count_matrix(self, sum_good_bad = False):
         
         n_sites = len(list(set(self.sites.values())))
         
         self.error_site_counts = np.zeros((self.n_tasks, len(self.codes), n_sites, 2))
         self.frame.apply(self.build_table_counts, axis=1)
-        return self.error_site_counts, self.frame[self.label]  
+       
+        if sum_good_bad == True:
+            return self.error_site_counts.sum(axis=3), self.frame[self.label].values
+        else:
+            return self.error_site_counts, self.frame[self.label].values #to_categorical(self.frame[self.label])  
     
     
     
