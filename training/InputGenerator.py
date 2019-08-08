@@ -120,6 +120,14 @@ class InputGenerator(object):
         self.dim_msg = len(w2v['w2v'][0])        
         
         
+    def set_preprocessed_tokens(self, path = '/nfshome/llayer/data/tokens_preprocessed.h5'):
+        
+        tokens = pd.read_hdf(path)
+        # Join the frames on task_name
+        self.actionshistory = pd.merge( self.actionshistory, tokens_list, on = ['task_name'], how='left')
+        # Dimension of the word vectors
+        self.dim_msg = len(tokens['error_msg_tokenized'][0][0])         
+        
     def set_padded_tokens(self, path = '/nfshome/llayer/data/w2v_messages.h5', max_length = 200):
         
         tokens = pd.read_hdf(path)

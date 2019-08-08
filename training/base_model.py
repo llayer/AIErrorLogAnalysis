@@ -147,11 +147,13 @@ class BaseModel():
     def kfold_val(self, X, y, kfold_splits = 5, kfold_function=KFold, max_epochs=100, batch_size=256, seed=42, verbose=0, \
               early_stopping_callback='default', early_stopping=False):
         
+        self.create_model(**self.model_params)
+        
         enum = enumerate(kfold_function(n_splits=kfold_splits, shuffle=True, random_state=seed).split(X,y))
         
-        if verbose != 0:
-            enum = tqdm(enum, total=kfold_splits, desc='kfold', leave=False, initial=0)
-            
+        #if verbose != 0:
+        #    enum = tqdm(enum, total=kfold_splits, desc='kfold', leave=False, initial=0)
+        
         cvscores = []
         for i,(index_train, index_valid) in enum:
             X_train, X_val = X[ index_train ], X[ index_valid ]
@@ -160,9 +162,9 @@ class BaseModel():
             self.train(X_train, y_train, X_val, y_val, max_epochs = max_epochs, 
                              batch_size = batch_size, early_stopping = early_stopping)
             
-            y_pred = self.predict(X_val,argmax=False)
-            score = roc_auc_score(y_val, y_pred)
-            cvscores.append(score)
+            #y_pred = self.predict(X_val,argmax=False)
+            #score = roc_auc_score(y_val, y_pred)
+            #cvscores.append(score)
             
         return cvscores
         
@@ -175,14 +177,14 @@ class BaseModel():
     def train(self, X_train, y_train, X_val, y_val, max_epochs=100, batch_size=256, seed=42, verbose=0, \
               early_stopping_callback='default', early_stopping=False): 
 
-        
-            
-        #self.class_weights = get_class_weights(y_train, self.num_classes)
         self.create_model(**self.model_params)
             
+        #self.class_weights = get_class_weights(y_train, self.num_classes)
         
-        keras_callbacks = [ PredictDataCallback(self.model, X_train, y_train, ''),
-                            PredictDataCallback(self.model, X_val  , y_val  , 'val_') ]
+            
+        
+        #keras_callbacks = [ PredictDataCallback(self.model, X_train, y_train, ''),
+        #                    PredictDataCallback(self.model, X_val  , y_val  , 'val_') ]
         
         if early_stopping == True:
             
@@ -199,17 +201,17 @@ class BaseModel():
                 keras_callbacks.append(early_stopping_callback)
             """
         
-        self.model.summary() 
-        print(X_train.shape)
-        print(X_val.shape)
+        #self.model.summary() 
+        #print(X_train.shape)
+        #print(X_val.shape)
         
         
         #keras_callbacks.append( roc_callback(training_data=(X_train, y_train),validation_data=(X_val, y_val)))
         
         #print( keras_callbacks )
         
-        history = self.model.fit( X_train, y_train, validation_data = (X_val, y_val), \
-                                 epochs = max_epochs, batch_size = batch_size, callbacks = [es] )#[metrics] + keras_callbacks)
+        self.model.fit( X_train, y_train, validation_data = (X_val, y_val), \
+                        epochs = max_epochs, batch_size = batch_size, callbacks = [es] )#[metrics] + keras_callbacks)
         
         """
         history = self.model.fit( x = X_train, y = y_train,
@@ -219,7 +221,7 @@ class BaseModel():
                                   verbose = verbose )
         """
         
-        return history.history
+        #return history.history
           
                                                
 
@@ -255,7 +257,7 @@ class BaseModel():
             #result = evaluation_function(y_test_cat, y_pred)
             result = -1 * roc_auc_score(y_test, y_pred
             """
-            cvscores = self.kfold_val(X, y, kfold_splits=5, max_epochs = 200, batch_size = 100, early_stopping = True)
+            cvscores = self.kfold_val(X, y, kfold_splits=kfold_splits, max_epochs = 200, batch_size = 100, early_stopping = True)
             result = -1 * np.mean( cvscores )
             print( result, np.std( cvscores ) )
             #if verbose != 0: print('Result: {}'.format(result))

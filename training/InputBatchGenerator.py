@@ -7,7 +7,8 @@ from keras.utils import to_categorical
 
 class InputBatchGenerator(object):
     
-    def __init__(self, frame, label, codes, sites, dim_msg, batch_size = None, msg = 'tokens'):
+    def __init__(self, frame, label, codes, sites, dim_msg, max_msg, 
+                 mode = 'default', batch_size = None, msg = 'tokens'):
         
         self.frame = frame
         self.frame['unique_index'] = self.frame.reset_index().index
@@ -18,6 +19,15 @@ class InputBatchGenerator(object):
         self.sites = sites
         self.dim_msg = dim_msg
         self.msg = msg
+        self.mode = mode
+        self.max_msg = max_msg
+        self.max_msg_per_wf, self.max_msg_per_site = self.get_max_msg()
+        
+    
+    def get_max_msg( self ):
+        
+        binary_msg = self.binary_msg_matrix()
+        return int(np.max(binary_msg.sum(axis=2).sum(axis=1))), int(np.max(binary_msg.sum(axis=2)))    
     
     
     def fill_counts( self, index_matrix, sites, site_state ):
@@ -80,22 +90,63 @@ class InputBatchGenerator(object):
         index = row['unique_index']
         index_matrix = index % self.batch_size
         
-        # Add word vectors
+        codes_used = {}
+        
+        # Check that there is at least one message
         if isinstance(log_sites, (list,)):
-
+            
+            print( len(log_sites) )
+            print( index_matrix, index )
+            # Loop over site
             for i in range(len(log_sites)):
-                if log_sites[i] == 'NoReportedSite':
-                    continue
-                                    
-                self.error_site_tokens[index_matrix, self.codes[log_errors[i]], self.sites[log_sites[i]]] = log_msg[i]
+                
+                # Loop over messages per wf, site, error
+                for j in range(len(log_msg[i])):
+                    
+                    #self.error_site_tokens[index_matrix, self.codes[log_errors[i]], 
+                    #                       self.sites[log_sites[i]], j ] = log_msg[i][j] 
+
+                    if self.mode == 'default':               
+                        self.error_site_tokens[index_matrix, self.codes[log_errors[i]], 
+                                               self.sites[log_sites[i]], j ] = log_msg[i][j]
+                        
+                    elif self.mode == 'sum_sites':
+                        if self.codes[log_errors[i]] in codes_used:
+                            codes_used[ self.codes[log_errors[i]] ] += 1
+                        else:
+                            codes_used[ self.codes[log_errors[i]] ] = 0
+                        self.error_site_tokens[index_matrix, self.codes[log_errors[i]], 
+                                               codes_used[self.codes[log_errors[i]]], j] = log_msg[i][j]
+                        
+                    elif self.mode == 'sum_sites_errors':
+                        self.error_site_tokens[index_matrix, i, j] = log_msg[i][j]
+                    
+                    else:
+                        print( 'Error' )
+                   
+                    if j+1 == self.max_msg:
+                        break
                 
            
     def msg_count_batch(self, start_pos, end_pos):
         
-        self.error_site_tokens = np.zeros((self.batch_size, len(self.codes), len(self.sites), self.dim_msg))
         self.error_site_counts = np.zeros((self.batch_size, len(self.codes), len(self.sites), 2))
+        #self.error_site_tokens = np.zeros((self.batch_size, len(self.codes), len(self.sites), self.max_msg, self.dim_msg))
+        
+        print( self.mode )
+        if self.mode == 'default':
+            self.error_site_tokens = np.zeros((self.batch_size, len(self.codes), len(self.sites), self.max_msg, self.dim_msg))
+        elif self.mode == 'sum_sites':
+            self.error_site_tokens = np.zeros((self.batch_size, len(self.codes), self.max_msg_per_site, 
+                                               self.max_msg, self.dim_msg))
+        elif self.mode == 'sum_sites_errors':
+            self.error_site_tokens = np.zeros((self.batch_size, self.max_msg_per_wf, self.max_msg, self.dim_msg))
+        else:
+            print( 'No valid configuration chosen' )
+        
+        
         self.frame.iloc[start_pos : end_pos].apply(self.build_table_msg, axis=1)
-        self.frame.iloc[start_pos : end_pos].apply(self.build_table_msg, axis=1)
+        self.frame.iloc[start_pos : end_pos].apply(self.build_table_counts, axis=1)
         
         return [self.error_site_tokens, self.error_site_counts]     
     
@@ -118,10 +169,6 @@ class InputBatchGenerator(object):
                     yield B
             except StopIteration:
                 logging.warning("start over generator loop")
-    
-    
-    
-    
            
         
     def build_table_msg_bin(self, row):
@@ -139,22 +186,15 @@ class InputBatchGenerator(object):
         elif self.msg == 'w2v_avg':
             log_msg = row['w2v']
             
-        index = row['unique_index']
-        if self.batch_size is not None:
-            index_matrix = index % self.batch_size
-        else:
-            index_matrix = index
+        index_matrix = row['unique_index']
         
         # Add word vectors
         if isinstance(log_sites, (list,)):
 
             for i in range(len(log_sites)):
-                if log_sites[i] == 'NoReportedSite':
-                    continue
                                     
                 self.error_site_tokens_bin[index_matrix, self.codes[log_errors[i]], self.sites[log_sites[i]]] = 1  
                
-    
     
     def binary_msg_matrix(self):
         
@@ -166,8 +206,9 @@ class InputBatchGenerator(object):
     def count_matrix(self, sum_good_bad = False):
         
         n_sites = len(list(set(self.sites.values())))
+        n_codes = len(list(set(self.codes.values())))
         
-        self.error_site_counts = np.zeros((self.n_tasks, len(self.codes), n_sites, 2))
+        self.error_site_counts = np.zeros((self.n_tasks, n_codes, n_sites, 2))
         self.frame.apply(self.build_table_counts, axis=1)
        
         if sum_good_bad == True:
