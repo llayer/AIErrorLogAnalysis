@@ -1,9 +1,17 @@
+import os
+import sys
+module_path = os.path.abspath(os.path.join('../utils'))
+#module_path = os.path.abspath(os.path.join('..'))
+if module_path not in sys.path:
+    sys.path.append(module_path)
+print( module_path )
+
 import pandas as pd
 import json
 import itertools
 import math
 import numpy as np
-import ut
+from  actionshist_utils import set_labels, get_exit_codes, get_sites
 from keras.preprocessing.sequence import pad_sequences
 
 
@@ -28,13 +36,13 @@ class InputGenerator(object):
         self.actionshistory = self.actionshistory.reset_index()
         self.actionshistory = self.actionshistory.rename(columns={'index': 'task_name'})
         # Get the unique exit codes and sites
-        self.good_codes, self.bad_codes = ut.get_exit_codes(self.actionshistory)
-        self.good_sites, self.bad_sites = ut.get_sites(self.actionshistory)
+        self.good_codes, self.bad_codes = get_exit_codes(self.actionshistory)
+        self.good_sites, self.bad_sites = get_sites(self.actionshistory)
         self.unique_sites = list(set(self.good_sites + self.bad_sites)) 
         self.unique_codes = list(set(self.good_codes + self.bad_codes))
         self.unique_codes = sorted(self.unique_codes, key=lambda x: float(x))
         self.sites, self.codes = self.list_to_index(self.unique_sites, self.unique_codes)
-        ut.set_binary_labels(self.actionshistory)
+        set_labels(self.actionshistory)
     
     
     def inspect_single_task(self, i_task ):

@@ -1,13 +1,14 @@
+import os
+import sys
+module_path = os.path.abspath(os.path.join('..'))
+if module_path not in sys.path:
+    sys.path.append(module_path)
+
 import keras
 from keras.layers import Input, Flatten, Dense, Dropout, Reshape, multiply
 import numpy as np
 from skopt.space import Real, Categorical, Integer
-
-from base_model import BaseModel
-from utils_train.losses import weighted_categorical_crossentropy
-from utils_train.model_utils import get_class_weights
-
-from utils_train.metrics import accuracy, weighted_accuracy, recall, precision, roc_auc
+from models.base_model import BaseModel
 
 class FF(BaseModel):
     
