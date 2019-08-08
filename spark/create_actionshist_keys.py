@@ -18,8 +18,8 @@ def loop_over_sites(sites, task_name, ignore_neg_code):
         if ignore_neg_code == True:
             if int(exit_code) == -1:
                 continue
-        for site in site_dict:
-            key.append((task_name, exit_code, site))
+        for site, count in site_dict.iteritems():
+            key.append((task_name, exit_code, site, count))
     return key
 
 
@@ -37,7 +37,7 @@ def map_to_key(row, ignore_neg_code):
 
 
 def expand_key(key):
-    return key[0], key[1], key[2]
+    return key[0], key[1], key[2], key[3]
 
 
 def get_keys(path, ignore_neg_code = True):
@@ -47,7 +47,7 @@ def get_keys(path, ignore_neg_code = True):
     data['keys'] = data.apply(lambda x: map_to_key(x, ignore_neg_code = ignore_neg_code), axis = 1)
     keys = data['keys'].apply(pd.Series).unstack().reset_index(drop=True).dropna()
     keys = keys.to_frame('key')
-    keys['task_name'], keys['error'], keys['site'] = zip(*keys['key'].map(expand_key))
+    keys['task_name'], keys['error'], keys['site'], keys['count'] = zip(*keys['key'].map(expand_key))
     keys = keys.drop(columns=['key'])
     keys.site = keys.site.str.encode('utf-8')
     
