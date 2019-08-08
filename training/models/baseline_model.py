@@ -3,7 +3,7 @@ import sys
 module_path = os.path.abspath(os.path.join('..'))
 if module_path not in sys.path:
     sys.path.append(module_path)
-
+import setGPU
 import keras
 from keras.layers import Input, Flatten, Dense, Dropout, Reshape, multiply
 import numpy as np
@@ -37,7 +37,7 @@ class FF(BaseModel):
             'dropout_value' : 0.015
         }
 
-    def create_model( self, learning_rate, dense_units, dense_layers, regulizer_value, dropout_value ): # dense_layers, dense_units, regulizer_value, dropout_value, learning_rate ):
+    def create_model( self, learning_rate, dense_units, dense_layers, regulizer_value, dropout_value ): 
 
         m_input = Input((self.num_error,self.num_sites, 2))
         #m_input = Input((self.num_error,self.num_sites))

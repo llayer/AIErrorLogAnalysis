@@ -2,11 +2,10 @@ import keras
 import pandas as pd
 import numpy as np
 import psutil
-import setGPU
-import baseline_model
+from models import baseline_model
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, StratifiedKFold
-import nlp_model
+#from models import nlp_model
 from keras.callbacks import EarlyStopping
 from keras import backend as K
 from sklearn.utils import class_weight

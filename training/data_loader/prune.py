@@ -1,7 +1,4 @@
 import numpy as np
-import InputGenerator
-import InputBatchGenerator
-
 
 def pruned_to_index(dict_old, list_new):
 
