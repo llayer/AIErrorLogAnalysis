@@ -2,6 +2,7 @@ import keras
 import pandas as pd
 import numpy as np
 import psutil
+import setGPU
 from models import baseline_model
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, StratifiedKFold

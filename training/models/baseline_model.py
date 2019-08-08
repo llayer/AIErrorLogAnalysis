@@ -3,7 +3,7 @@ import sys
 module_path = os.path.abspath(os.path.join('..'))
 if module_path not in sys.path:
     sys.path.append(module_path)
-import setGPU
+
 import keras
 from keras.layers import Input, Flatten, Dense, Dropout, Reshape, multiply
 import numpy as np
