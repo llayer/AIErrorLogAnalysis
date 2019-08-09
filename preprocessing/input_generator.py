@@ -11,7 +11,36 @@ import pandas as pd
 from keras.preprocessing.sequence import pad_sequences
 
 
-def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 200, store = False, 
+def get_site_info(frame):
+    
+    non_neg_sites = list(frame[frame['error'] != '-1'.encode('utf-8') ]['site'].unique())
+    counts = frame.groupby('site')['count'].sum().to_frame('counts').reset_index()
+    frequency = frame['site'].value_counts().to_frame('frequency').reset_index().rename(columns={'index': 'site'})
+    
+    combined_info = pd.merge(counts, frequency, on=['site'], how = 'outer')  
+  
+    def neg_sites(site):
+        if site in non_neg_sites:
+            return False
+        else:
+            return True
+        
+    combined_info['only_unknown'] = combined_info['site'].apply(neg_sites)
+    return combined_info
+
+def get_error_info(frame):
+                   
+    counts = frame.groupby('error')['count'].sum().to_frame('counts').reset_index()
+    frequency = frame['error'].value_counts().to_frame('frequency').reset_index().rename(columns={'index': 'error'})
+    
+    combined_info = pd.merge(counts, frequency, on=['error'], how = 'outer')                     
+    return combined_info
+                   
+
+    
+    
+
+def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 200, store = True, 
                  store_path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/input/'):
         
     # Load the actionshistory
@@ -27,7 +56,9 @@ def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 2
     tokens.error = tokens.error.str.encode('utf-8')
     tokens.site = tokens.site.str.encode('utf-8')
     
+    
     if mode == 'tokens':
+        print( 'Aggregating tokens' )
         # Pad the tokens
         tokens['error_msg_tokenized'] = list(pad_sequences(tokens['error_msg_tokenized'], maxlen=max_length, 
                                                  padding="post", truncating="post"))
@@ -36,13 +67,22 @@ def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 2
         
         
     else:
+        print( 'Aggregating w2v average' )
         tokens = tokens.groupby(['task_name', 'error', 'site'], as_index=False)['avg_w2v'].agg(lambda x: list(x))
         
     print( 'Merging the frames' )
     sparse_frame = pd.merge( actionshist_keys, tokens, on = ['task_name', 'error', 'site'], how='left')
     
+    # Getting the sites and error codes
+    site_frame = get_site_info(sparse_frame)
+    codes_frame = get_error_info(sparse_frame)
+    #unique_sites = sparse_frame['site'].unique()
+    #unique_codes = sparse_frame['error'].unique()
+    #site_frame = pd.DataFrame(unique_sites, columns = ['site'])
+    #codes_frame = pd.DataFrame(unique_codes, columns = ['error_code'])
+    
     print( 'Aggregating the frames' )
-    if mode == 'index':
+    if mode == 'tokens':
         sparse_frame = sparse_frame.groupby(['task_name', 'label'], as_index=False)['error', 'site', 'site_state', 'count',
                                                                                     'error_msg_tokenized'].agg(lambda x: list(x))
     else:
@@ -52,9 +92,13 @@ def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 2
         
     if store == True:
         print( 'Storing the frame' )
-        sparse_frame.to_hdf(store_path + mode + 'h5', 'frame')
+        
+        outfile = store_path + 'input_' + mode + '.h5'
+        sparse_frame.to_hdf( outfile , 'frame')
+        site_frame.to_hdf( outfile , 'frame2')
+        codes_frame.to_hdf( outfile, 'frame3')
                   
-    return sparse_frame
+    return sparse_frame, site_frame, codes_frame
         
         
         
