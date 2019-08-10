@@ -5,12 +5,6 @@ import numpy as np
 from keras.utils import to_categorical
 
 
-def list_to_index(sites, codes):
-
-    sites_index = {k: v for v, k in enumerate(sites)}
-    codes_index = {k: v for v, k in enumerate(codes)}
-    return sites_index, codes_index
-
 
 class InputBatchGenerator(object):
     
@@ -129,7 +123,7 @@ class InputBatchGenerator(object):
                     codes_used[ self.codes[error] ] = 0
                 
                 # Fill the error message
-                #self.fill_messages( index_matrix, error, site, error_message_sequence, i_key, codes_used)
+                self.fill_messages( index_matrix, error, site, error_message_sequence, i_key, codes_used)
 
                 
     def get_counts_matrix(self, sum_good_bad = False):
