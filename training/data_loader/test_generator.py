@@ -1,5 +1,6 @@
 import numpy as np
-import InputBatchGenerator
+import input_batch_generator as gen
+import index 
 
 
 
