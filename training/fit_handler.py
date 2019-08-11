@@ -123,8 +123,8 @@ class FitHandler(object):
 
             #y_pred = ff.predict(X_val,argmax=False)
             
-            y_test, y_pred = self.train( p, X_train, y_train, X_test, y_test, max_epochs = 200, 
-                                         batch_size = p['batch_size'], early_stopping = True)
+            y_test, y_pred = self.train( p, X_train, y_train, X_test, y_test, max_epochs = max_epochs, 
+                                         batch_size = batch_size, early_stopping = True)
             
             score = roc_auc_score(y_test, y_pred)
             cvscores.append(score)
