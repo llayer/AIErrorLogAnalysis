@@ -5,11 +5,25 @@ if module_path not in sys.path:
     sys.path.append(module_path)
 from create_actionshist_keys import *
 from actionshist_utils import *
-
+import numpy as np
 import pandas as pd
 #from  actionshist_utils import set_labels, get_exit_codes, get_sites
 from keras.preprocessing.sequence import pad_sequences
 
+def clean_error_type(error_type):
+    
+    if len(error_type) > 50:
+        return str('TypeError').decode('utf-8')
+    else:
+        return error_type
+
+def encode_sites_unicode( site ):
+    
+    if site == 'T3_US_NERSC\xc2\xa0':
+        return 'T3_US_NERSC'.decode('utf-8')
+    else:
+        return site
+    
 
 def get_site_info(frame):
     
@@ -52,6 +66,7 @@ def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 2
     # Get the error messages
     print( 'Loading tokens' )
     tokens = pd.read_hdf( path_tokens )
+    tokens['error_type'] = tokens['error_type'].apply(clean_error_type)
     tokens.error = tokens.error.astype(str)
     tokens.error = tokens.error.str.encode('utf-8')
     tokens.site = tokens.site.str.encode('utf-8')
@@ -60,11 +75,13 @@ def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 2
     if mode == 'tokens':
         print( 'Aggregating tokens' )
         # Pad the tokens
-        tokens['error_msg_tokenized'] = list(pad_sequences(tokens['error_msg_tokenized'], maxlen=max_length, 
-                                                 padding="post", truncating="post"))
+        #tokens['error_msg_tokenized'] = list(pad_sequences(tokens['error_msg_tokenized'], maxlen=max_length, 
+        #                                         padding="post", truncating="post"))
         # Aggregate the message per task, error, site
-        tokens = tokens.groupby(['task_name', 'error', 'site'], as_index=False)['error_msg_tokenized'].agg(lambda x: list(x))
-        
+        tokens = tokens.groupby(['task_name', 'error', 'site'], as_index=False)['error_msg_tokenized', 'exit_codes',
+                                                                                'steps_counter',
+                                                                                'error_type'].agg(lambda x: list(x))
+  
         
     else:
         print( 'Aggregating w2v average' )
@@ -73,22 +90,26 @@ def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 2
     print( 'Merging the frames' )
     sparse_frame = pd.merge( actionshist_keys, tokens, on = ['task_name', 'error', 'site'], how='left')
     
+    
+    # Clean the unicode sites
+    sparse_frame['site'] = sparse_frame['site'].apply(encode_sites_unicode)
+  
     # Getting the sites and error codes
     site_frame = get_site_info(sparse_frame)
     codes_frame = get_error_info(sparse_frame)
-    #unique_sites = sparse_frame['site'].unique()
-    #unique_codes = sparse_frame['error'].unique()
-    #site_frame = pd.DataFrame(unique_sites, columns = ['site'])
-    #codes_frame = pd.DataFrame(unique_codes, columns = ['error_code'])
+    
     
     print( 'Aggregating the frames' )
     if mode == 'tokens':
+        #sparse_frame['error_msg_tokenized'] = sparse_frame['error_msg_tokenized'].replace(np.nan, 0, regex=True)
         sparse_frame = sparse_frame.groupby(['task_name', 'label'], as_index=False)['error', 'site', 'site_state', 'count',
-                                                                                    'error_msg_tokenized'].agg(lambda x: list(x))
+                                                                                    'error_msg_tokenized','exit_codes',
+                                                                                    'steps_counter',
+                                                                                    'error_type'].agg(lambda x: list(x))
     else:
         sparse_frame = sparse_frame.groupby(['task_name', 'label'], as_index=False)['error', 'site', 'site_state',
                                                                                     'count', 'avg_w2v'].agg(lambda x: list(x))
-
+    
         
     if store == True:
         print( 'Storing the frame' )
