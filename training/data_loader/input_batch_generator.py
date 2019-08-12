@@ -8,7 +8,7 @@ from keras.utils import to_categorical
 
 class InputBatchGenerator(object):
     
-    def __init__(self, frame, label, codes, sites, dim_msg, batch_size = 1, max_msg = 5, max_msg_per_error = 20, 
+    def __init__(self, frame, label, codes, sites, pad_dim, batch_size = 1, max_msg = 5, max_msg_per_error = 20, 
                  max_msg_per_wf = 100, mode = 'default', only_counts = False, averaged = False):
         
         self.frame = frame
@@ -18,7 +18,7 @@ class InputBatchGenerator(object):
         self.batch_size = batch_size
         self.codes = codes
         self.sites = sites
-        self.dim_msg = dim_msg
+        self.pad_dim = pad_dim
         self.max_msg = max_msg
         self.max_msg_per_error = max_msg_per_error
         self.max_msg_per_wf = max_msg_per_wf
@@ -29,6 +29,25 @@ class InputBatchGenerator(object):
         self.unique_codes = len(list(set(self.codes.values())))
         self.n_tasks = len(frame)
        
+    
+    
+
+    def pad_along_axis(self, array, axis=0):
+
+        array = np.array(array)
+        pad_size = self.pad_dim - array.shape[axis]
+        axis_nb = len(array.shape)
+
+        if pad_size < 0:
+            return array[0:self.pad_dim]
+
+        npad = [(0, 0) for x in range(axis_nb)]
+        npad[axis] = (0, pad_size)
+
+        b = np.pad(array, pad_width=npad, mode='constant', constant_values=0)
+
+        return b
+    
     
     def fill_counts(self, index, error, site, site_state, count):
         
@@ -46,6 +65,12 @@ class InputBatchGenerator(object):
         # Loop over the error message sequence
         for counter, error_message in enumerate(error_message_sequence):
 
+            # Pad the error message
+            error_message = self.pad_along_axis(error_message)
+            
+            #print (index, error, site, i_key, counter)
+            #print (error_message)
+            
             # Stop when maximal message is reached
             if counter == self.max_msg:
                 break             
@@ -149,12 +174,12 @@ class InputBatchGenerator(object):
         # Error message matrix
         if self.mode == 'default':
             self.error_site_tokens = np.zeros((self.batch_size, self.unique_codes, self.unique_sites, 
-                                               self.max_msg, self.dim_msg))
+                                               self.max_msg, self.pad_dim))
         elif self.mode == 'sum_sites':
             self.error_site_tokens = np.zeros((self.batch_size, self.unique_codes, self.max_msg_per_site, 
-                                               self.max_msg, self.dim_msg))
+                                               self.max_msg, self.pad_dim))
         elif self.mode == 'sum_sites_errors':
-            self.error_site_tokens = np.zeros((self.batch_size, self.max_msg_per_wf, self.max_msg, self.dim_msg))
+            self.error_site_tokens = np.zeros((self.batch_size, self.max_msg_per_wf, self.max_msg, self.pad_dim))
         else:
             print( 'No valid configuration chosen' )
         

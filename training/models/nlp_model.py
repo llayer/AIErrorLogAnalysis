@@ -1,18 +1,21 @@
+import os
+import sys
+module_path = os.path.abspath(os.path.join('..'))
+if module_path not in sys.path:
+    sys.path.append(module_path)
+
 import numpy as np
 from keras.layers import Embedding, Input, Dense, LSTM, GRU, Bidirectional, TimeDistributed, Dropout, Flatten, Reshape
-from keras.layers import average, Concatenate
+from keras.layers import average, Concatenate, Lambda
 from keras.models import Model
 from keras.optimizers import Adam
-
-from base_model import BaseModel
-from utils_train.losses import weighted_categorical_crossentropy
-from utils_train.model_utils import get_class_weights
-
+from models.base_model import BaseModel
+from keras import backend as K
 
 class NLP_Model(BaseModel):
     
     
-    def __init__(self, num_classes, num_error, num_sites, max_sequence_length):
+    def __init__(self, num_classes, num_error, num_sites, max_sequence_length, max_msg, debug = False):
         
         self.embedding_matrix = np.load('/nfshome/llayer/data/embedding_matrix.npy')
         
@@ -21,6 +24,8 @@ class NLP_Model(BaseModel):
         self.num_sites = num_sites
         self.num_classes = num_classes
         self.max_senten_num = num_error * num_sites
+        self.max_msg = max_msg
+        self.debug = debug
         self.model_params = {
             'learning_rate':0.1
         }
@@ -31,7 +36,7 @@ class NLP_Model(BaseModel):
         
         dims_embed = self.embedding_matrix.shape
         embedding = Embedding(dims_embed[0], dims_embed[1], weights=[self.embedding_matrix], \
-                              input_length = self.max_sequence_length, trainable = True)
+                              input_length = self.max_sequence_length, trainable = False)
     
         return embedding
     
@@ -43,6 +48,10 @@ class NLP_Model(BaseModel):
         wordEncoder = Model(word_input, word_lstm)
         
         return wordEncoder
+    
+    def sentence_encoder_model( self ):
+        pass
+        
     
     def site_encoder_model( self ):
         
@@ -57,19 +66,41 @@ class NLP_Model(BaseModel):
         
         # Input layers
         count_input = Input(shape = (self.num_error, self.num_sites, 2, ), dtype='float32')
-        sent_input = Input(shape = (self.num_error, self.num_sites, self.max_sequence_length), dtype='float32')
+        sent_input = Input(shape = (self.num_error, self.num_sites, self.max_msg, self.max_sequence_length), dtype='float32')
+        
+        if self.debug: print( sent_input )
         
         # Reshape the matrix
-        sent_input_reshaped = Reshape(( self.num_error * self.num_sites , self.max_sequence_length))(sent_input)
+        sent_input_reshaped = Reshape(( self.num_error * self.num_sites * self.max_msg , self.max_sequence_length))(sent_input)
+        
+        if self.debug: print( sent_input_reshaped )
         
         # Encode the words of the sentences
         sent_encoder = TimeDistributed(self.word_encoder_model())(sent_input_reshaped)
         
+        if self.debug: print( sent_encoder )
+        
         # Shape back to concat the matrix
-        sent_encoder_reshaped = Reshape(( self.num_error, self.num_sites , 10))(sent_encoder)
+        sent_encoder_reshaped = Reshape(( self.num_error * self.num_sites, self.max_msg , 10))(sent_encoder)
+        
+        if self.debug: print( sent_encoder_reshaped )
+        
+        # Average the message sequence
+        sentence_averaged = Lambda(lambda x: K.mean(x, axis=2))(sent_encoder_reshaped)
+        
+        if self.debug: print( sentence_averaged )
+            
+        # Reshape the error sites matrix
+        
+        sentence_averaged_reshaped = Reshape(( self.num_error , self.num_sites, 10))(sentence_averaged)
+        
+        if self.debug: print( sentence_averaged_reshaped )
+        if self.debug: print( count_input )
         
         # Merge the counts and words
-        merge_counts_words = Concatenate(axis=3)([sent_encoder_reshaped, count_input])
+        merge_counts_words = Concatenate(axis=3)([sentence_averaged_reshaped, count_input])
+        
+        if self.debug: print( merge_counts_words )
         
         # Reshape the tensor to wrap up the sites
         #reshape_sites_codes = Reshape(( self.num_error, self.num_sites , 12))
@@ -78,14 +109,22 @@ class NLP_Model(BaseModel):
         # Encode the sites 
         exit_code_encoder = TimeDistributed(self.site_encoder_model())(merge_counts_words)
         
+        if self.debug: print( exit_code_encoder )
+        
         # Flatten
         flattened = Flatten()(exit_code_encoder)
+        
+        if self.debug: print( flattened )
         
         # Dense
         dense = Dense(10, activation = "relu", kernel_initializer="normal")(flattened)
         
+        if self.debug: print( dense )
+        
         # Output layer
         preds = Dense(1, activation='sigmoid')(dense)
+        
+        if self.debug: print(preds)
         
         # Final model
         self.model = Model([sent_input, count_input], preds)
