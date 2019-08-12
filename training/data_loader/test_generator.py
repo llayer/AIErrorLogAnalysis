@@ -33,6 +33,41 @@ def to_num( good, bad, codes, sites ):
     return matrix
 
 
+def test_count_matrix_setup( actionshist, ml_input, codes, sites, i_task ):
+    
+    actionshist_task = actionshist.iloc[ i_task ]
+    task_name = actionshist_task['task_name']
+    ml_input_task = ml_input[ml_input['task_name' == task_name]]
+    
+    # Matrix for actionshist
+    indices = count_indices( actionshist_task )
+    test_matrix = to_num( indices[0], indices[1], codes, sites)  
+    
+    
+    # Matrix for the batch generator
+    generator = gen.InputBatchGenerator(ml_input_task, 'label', codes_index, sites_index, 200, batch_size = 1)
+    matrix = generator.get_counts_matrix()
+    
+    # Assert that the arrays are the same
+    if np.testing.assert_array_equal(test_matrix, test_matrix_gen) == True:
+        print( 'Arrays are the same' )
+
+"""
+
+def test(path_actionshist, path_input):
+    
+
+    
+    # Load the ml input 
+    ml_input = pd.read_hdf(path_input, 'frame')
+    sites = pd.read_hdf(path_input, 'frame2')
+    codes = pd.read_hdf(path_input, 'frame3')
+    
+"""
+    
+    
+
+
 def test_count_matrix( gen, i_task ):
 
     # Generate the matrix for a single task
