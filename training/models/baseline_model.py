@@ -30,11 +30,11 @@ class FF(BaseModel):
             
         }"""
         self.model_params = {
-            'learning_rate':1e-2,
-            'dense_units':20,
-            'dense_layers' : 3,
-            'regulizer_value' : 0.0015,
-            'dropout_value' : 0.015
+            'learning_rate':0.005675,
+            'dense_units':35,
+            'dense_layers' : 6,
+            'regulizer_value' : 0.001000,
+            'dropout_value' : 0.052315
         }
 
     def create_model( self, learning_rate, dense_units, dense_layers, regulizer_value, dropout_value ): 

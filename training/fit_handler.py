@@ -14,11 +14,11 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import f1_score
-from sklearn.metrics import auc
 from sklearn.metrics import average_precision_score
 from skopt.utils import use_named_args
 from skopt import gp_minimize
-
+from sklearn.metrics import roc_curve, auc
+from scipy import interp
 
 # Early stopping
 class EarlyStoppingRoc(keras.callbacks.Callback):
@@ -30,6 +30,7 @@ class EarlyStoppingRoc(keras.callbacks.Callback):
         self.best_score = -np.inf if mode == 'max' else np.inf
         self.wait = 0
         self.is_better = np.greater if mode == 'max' else np.less
+        self.reports = []
 
 
     def on_epoch_end(self, epoch, logs={}):
@@ -40,6 +41,7 @@ class EarlyStoppingRoc(keras.callbacks.Callback):
         precision, recall, thresholds = precision_recall_curve(val_targ, val_predict)
         score = roc_auc_score(val_targ, val_predict)
         monit = (auc(recall, precision), average_precision_score(val_targ, val_predict))
+        self.reports.append(score)
         #print(val_predict_max)
         print( len(val_predict_max[val_predict_max==1]) )
         print
@@ -68,18 +70,18 @@ class FitHandler(object):
         dim_errors = X_train.shape[1]
         dim_sites = X_train.shape[2]
 
+        class_weights = class_weight.compute_class_weight('balanced', np.unique( y_train), y_train)
+
         model_optimize = baseline_model.FF(2, dim_errors, dim_sites)
         model_optimize.create_model( p['learning_rate'], p['dense_units'], 
                              p['dense_layers'], p['regulizer_value'], p['dropout_value'] )  
         
         es = EarlyStoppingRoc(mode='max', patience=5)
 
-        #ff = baseline_model.FF(2, dim_errors, dim_sites)
-        #ff.create_model( **ff.model_params )
-        class_weights = class_weight.compute_class_weight('balanced', np.unique( y_train), y_train)
-        #print( class_weights )
         model_optimize.model.fit( X_train, y_train, validation_data = (X_test, y_test), 
-                                 epochs = max_epochs, batch_size = batch_size, callbacks =[es], class_weight=class_weights)            
+                                           epochs = max_epochs, batch_size = batch_size, callbacks =[es],
+                                           class_weight=class_weights)            
+        
         y_pred = model_optimize.predict(X_test, argmax=False)
         
         del model_optimize
@@ -87,60 +89,56 @@ class FitHandler(object):
         
         print(psutil.cpu_percent(), psutil.virtual_memory())
 
-        return y_test, y_pred
+        return y_test, y_pred, es
     
     
     def kfold_val(self, p, X, y, kfold_splits = 5, kfold_function=KFold, 
-                  max_epochs=100, batch_size=256, seed=42, verbose=0,
-                  early_stopping_callback='default', early_stopping=False):
+                  max_epochs=100, batch_size=256, seed=42, verbose=0, early_stopping=False, optimize = True):
 
         print(psutil.cpu_percent(), psutil.virtual_memory())
         
-        enum = enumerate(kfold_function(n_splits=kfold_splits, shuffle=True, random_state=seed).split(X,y))
-
-        class_weights = class_weight.compute_class_weight('balanced', np.unique( y ), y)
-        
         cvscores = []
+        early_stoppings = []
+        tprs = []
+        fprs = []
+        aucs = []        
+        
+        enum = enumerate(kfold_function(n_splits=kfold_splits, shuffle=True, random_state=seed).split(X,y))
         for i,(index_train, index_valid) in enum:
             
-            #dim_errors = X.shape[1]
-            #dim_sites = X.shape[2]
-
-            #model_optimize = baseline_model.FF(2, dim_errors, dim_sites)
-            #model_optimize.create_model( p['learning_rate'], p['dense_units'], 
-            #                             p['dense_layers'], p['regulizer_value'], p['dropout_value'] )
             
             X_train, X_test = X[ index_train ], X[ index_valid ]
             y_train, y_test = y[ index_train ], y[ index_valid ]
 
-            #es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=3)
             es = EarlyStoppingRoc(mode='max', patience=3)
     
-            #ff = baseline_model.FF(2, dim_errors, dim_sites)
-            #ff.create_model( **model_params )
-            #ff.model.fit( X_train, y_train, class_weight = class_weights, validation_data = (X_val, y_val), 
-            #             epochs = max_epochs, batch_size = batch_size, callbacks =[es])
-
-            #y_pred = ff.predict(X_val,argmax=False)
             
-            y_test, y_pred = self.train( p, X_train, y_train, X_test, y_test, max_epochs = max_epochs, 
-                                         batch_size = batch_size, early_stopping = True)
+            y_test, y_pred, es = self.train( p, X_train, y_train, X_test, y_test, max_epochs = max_epochs, 
+                                                     batch_size = batch_size, early_stopping = True)
             
-            score = roc_auc_score(y_test, y_pred)
-            cvscores.append(score)
+            if optimize == True:
+                score = roc_auc_score(y_test, y_pred)
+                cvscores.append(score)
+                
+            else:
+                early_stoppings.append(es)
+                # Compute ROC curve and area the curve
+                fpr, tpr, _ = roc_curve(y_test, y_pred)
+                roc_auc = auc(fpr, tpr)
+                fprs.append(fpr)
+                tprs.append(tpr)
+                aucs.append(roc_auc)
+                
 
-            #del model_optimize
-            #K.clear_session()        
-
-            #print(psutil.cpu_percent(), psutil.virtual_memory())
-
-        return cvscores
+        if optimize == True:
+            return cvscores
+        else:
+            return {'es': early_stoppings, 'aucs': aucs, 'tprs': tprs, 'fprs': fprs}
     
   
 
     def find_optimal_parameters( self, model, X, y, cv=True, kfold_splits=3, num_calls=12,
-                                 max_epochs=100, batch_size=100, 
-                                 seed=42, verbose=1, summary_txt_path=None ): 
+                                 max_epochs=100, batch_size=100, seed=42, verbose=1 ): 
 
         print(psutil.cpu_percent(), psutil.virtual_memory())
 
@@ -187,7 +185,6 @@ class FitHandler(object):
          
 
             print( result )
-            #if verbose != 0: print('Result: {}'.format(result))
             num_skopt_call += 1
 
             print(psutil.cpu_percent(), psutil.virtual_memory())
@@ -199,14 +196,6 @@ class FitHandler(object):
                                      n_calls = num_calls, x0 = prior_values )
 
         return search_result, cv_results
-
-        #s = create_skopt_results_string( search_result, prior_names, 
-        #                                 num_calls, summary_txt_path )
-        #if verbose != 0: print(s)
-
-        #best_params = get_best_params( search_result, prior_names )
-        #self.model_params = best_params
-        #return best_params
     
     
     def get_results(self, search_result, prior_names):
