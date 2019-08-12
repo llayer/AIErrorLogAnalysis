@@ -1,6 +1,86 @@
 import numpy as np
+import os
+import sys
+module_path = os.path.abspath(os.path.join('../../utils'))
+if module_path not in sys.path:
+    sys.path.append(module_path)
+from create_actionshist_keys import *
+from actionshist_utils import *
+import index
 import input_batch_generator as gen
-import index 
+
+
+
+def load_actionshist_counts(path_actionshist =
+                            '/eos/user/l/llayer/AIErrorLogAnalysis/data/actionshist/actionshistory_300719.json'):
+    
+    # Load the actionshistory
+    print( 'Loading actionshist and generating keys' )
+    actionshist = load_data(path_actionshist)
+    set_binary_labels(actionshist)
+    actionshist_keys = get_keys(actionshist, ignore_neg_code = False)
+    total_counts = actionshist_keys['count'].sum()
+    total_keys = len(actionshist_keys['count'])
+    
+    del actionshist_keys
+    return total_counts, total_keys
+
+
+def count_matrix_sum(gen, total_counts, total_keys):
+        
+    X, _ = gen.get_counts_matrix()
+    binary = X > 0
+    
+    assert(total_counts == X.sum())
+    assert(total_keys == binary.sum())
+    
+    del X
+    del binary
+    
+    return True
+
+
+def t_count_matrix(input_ml, sites, codes):
+    
+    total_counts, total_keys = load_actionshist_counts()
+    
+    # Standard count matrix
+    padding_size = 200
+    sites_index, codes_index = index.to_index(list(sites['site']), list(codes['error']))
+    generator = gen.InputBatchGenerator(input_ml, 'label', codes_index, sites_index,
+                                                      padding_size, batch_size=10)
+    count_matrix_sum(generator, total_counts, total_keys)
+
+    # Prune without counts
+    sites_index, codes_index = index.prune_to_index(codes, sites, only_unknown = True, counts = False, error_threshold = 100, site_threshold = 1000)
+    generator = gen.InputBatchGenerator(input_ml, 'label', codes_index, sites_index,
+                                                      padding_size, batch_size=10)    
+    count_matrix_sum(generator, total_counts, total_keys)
+    
+    
+    # Prune with counts
+    sites_index, codes_index = index.prune_to_index(codes, sites, only_unknown = True, counts = True, error_threshold = 1000, site_threshold = 10000)
+    generator = gen.InputBatchGenerator(input_ml, 'label', codes_index, sites_index,
+                                                      padding_size, batch_size=10) 
+    count_matrix_sum(generator, total_counts, total_keys)
+
+    
+    
+
+def t_batch_gen_sum(gen):
+    
+    sum_counts = []
+    sum_msg = []
+    
+    for X,y in gen.gen_batches():
+        
+        n_msgs = X[0].sum(axis=4).sum(axis=3) > 0
+        sum_msg.append(n_msgs.sum())
+        sum_counts.append(X[1].sum())
+        
+    print np.array(sum_counts).sum()
+    print np.array(sum_msg).sum()
+
 
 
 
