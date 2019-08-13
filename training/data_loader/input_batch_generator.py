@@ -8,8 +8,8 @@ from keras.utils import to_categorical
 
 class InputBatchGenerator(object):
     
-    def __init__(self, frame, label, codes, sites, pad_dim, batch_size = 1, max_msg = 5, max_msg_per_error = 20, 
-                 max_msg_per_wf = 100, mode = 'default', only_counts = False, averaged = False):
+    def __init__(self, frame, label, codes, sites, pad_dim, batch_size = 1, max_msg = 5, max_msg_per_error = 50, 
+                 max_msg_per_wf = 200, mode = 'default', only_counts = False, averaged = False):
         
         self.frame = frame
         self.frame['unique_index'] = self.frame.reset_index().index
@@ -159,7 +159,7 @@ class InputBatchGenerator(object):
             self.error_site_tokens = np.zeros((self.batch_size, self.unique_codes, self.unique_sites, 
                                                self.max_msg, self.pad_dim))
         elif self.mode == 'sum_sites':
-            self.error_site_tokens = np.zeros((self.batch_size, self.unique_codes, self.max_msg_per_site, 
+            self.error_site_tokens = np.zeros((self.batch_size, self.unique_codes, self.max_msg_per_error, 
                                                self.max_msg, self.pad_dim))
         elif self.mode == 'sum_sites_errors':
             self.error_site_tokens = np.zeros((self.batch_size, self.max_msg_per_wf, self.max_msg, self.pad_dim))
