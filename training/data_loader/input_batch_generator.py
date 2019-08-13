@@ -65,6 +65,7 @@ class InputBatchGenerator(object):
         # Loop over the error message sequence
         for counter, error_message in enumerate(error_message_sequence):
 
+            
             # Pad the error message
             error_message = self.pad_along_axis(error_message)
             
@@ -78,7 +79,7 @@ class InputBatchGenerator(object):
             # Sequence per task, error, site
             if self.mode == 'default':               
                 self.error_site_tokens[index, self.codes[error], self.sites[site], counter ] = error_message
-
+            
             # Sequence per task, error
             elif self.mode == 'sum_sites':
                 if codes_used[self.codes[error]] == self.max_msg_per_error:
@@ -93,32 +94,12 @@ class InputBatchGenerator(object):
 
             else:
                 print( 'Error' )       
+            
     
-    
-    def to_dense(self, row):
+    def to_dense(self, index_matrix, values):
 
-        """
-        Fill the matrix batch with the error messages
-        """
-        
-        # Get the values per workflow
-        index = row['unique_index']
-        errors = row['error']
-        sites = row['site']
-        counts = row['count']
-        site_states = row['site_state']
-        
-        if self.averaged == False:
-            error_messages = row['error_msg_tokenized']
-        else:
-            error_messages = row['avg_w2v']
-        
-        # Create batches
-        if self.only_counts == True:
-            index_matrix = index
-        else:
-            index_matrix = index % self.batch_size
-        
+        errors, sites, counts, site_states, error_messages = values
+
         # Store the used codes
         codes_used = {}
         
@@ -155,18 +136,20 @@ class InputBatchGenerator(object):
         
         self.only_counts = True
         
-        self.error_site_counts = np.zeros((self.n_tasks, self.unique_codes, self.unique_sites, 2))
-        self.frame.apply(self.to_dense, axis=1)
-       
+        self.error_site_counts = np.zeros((self.n_tasks, self.unique_codes, self.unique_sites, 2), dtype=np.float32)
+        batch = self.frame
+        [self.to_dense(counter, values) for counter, values in enumerate(zip(self.frame['error'], self.frame['site'], 
+                                                                             self.frame['count'], self.frame['site_state'],
+                                                                             self.frame['error_msg_tokenized']))]        
         if sum_good_bad == True:
             return self.error_site_counts.sum(axis=3), self.frame[self.label].values
         else:
             return self.error_site_counts, self.frame[self.label].values        
+    
+    
+    def msg_batch(self, start_pos, end_pos):
         
-        
-    def msg_count_batch(self, start_pos, end_pos):
-        
-        self.only_counts == False
+        self.only_counts = False
         
         # Error site matrix
         self.error_site_counts = np.zeros((self.batch_size, self.unique_codes, self.unique_sites, 2))
@@ -183,9 +166,11 @@ class InputBatchGenerator(object):
         else:
             print( 'No valid configuration chosen' )
         
-        self.frame.iloc[start_pos : end_pos].apply(self.to_dense, axis=1)
+        batch = self.frame.iloc[start_pos : end_pos]
+        [self.to_dense(counter, values) for counter, values in enumerate(zip(batch['error'], batch['site'], batch['count'],
+                                                                          batch['site_state'], batch['error_msg_tokenized']))]
         
-        return [self.error_site_tokens, self.error_site_counts]     
+        return [self.error_site_tokens, self.error_site_counts]   
     
     
     def gen_batches(self):
@@ -194,9 +179,9 @@ class InputBatchGenerator(object):
  
             next_pos = cur_pos + self.batch_size 
             if next_pos <= self.n_tasks:
-                yield (self.msg_count_batch( cur_pos, next_pos ), self.frame[self.label].iloc[cur_pos : next_pos].values)
+                yield (self.msg_batch( cur_pos, next_pos ), self.frame[self.label].iloc[cur_pos : next_pos].values)
             else:
-                yield (self.msg_count_batch( cur_pos, self.n_tasks ), self.frame[self.label].iloc[cur_pos : self.n_tasks].values)   
+                yield (self.msg_batch( cur_pos, self.n_tasks ), self.frame[self.label].iloc[cur_pos : self.n_tasks].values)   
                   
     def gen_inf_batches(self):
         
