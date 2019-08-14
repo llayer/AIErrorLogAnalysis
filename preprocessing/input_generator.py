@@ -67,6 +67,7 @@ def create_input( path_actionshist, path_tokens, max_length = 200, store = True,
     print( 'Loading tokens' )
     tokens = pd.read_hdf( path_tokens )
     tokens['error_type'] = tokens['error_type'].apply(clean_error_type)
+    tokens['avg_w2v'] = tokens['avg_w2v'].apply(lambda x:list( float(entry) for entry in x ))
     tokens.error = tokens.error.astype(str)
     tokens.error = tokens.error.str.encode('utf-8')
     tokens.site = tokens.site.str.encode('utf-8')
