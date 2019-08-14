@@ -78,6 +78,7 @@ class InputBatchGenerator(object):
             
             # Sequence per task, error, site
             if self.mode == 'default':               
+                #print( self.codes[error], error, self.sites[site], site, counter )
                 self.error_site_tokens[index, self.codes[error], self.sites[site], counter ] = error_message
             
             # Sequence per task, error

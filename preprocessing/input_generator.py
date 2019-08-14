@@ -54,7 +54,7 @@ def get_error_info(frame):
     
     
 
-def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 200, store = True, 
+def create_input( path_actionshist, path_tokens, max_length = 200, store = True, 
                  store_path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/input/'):
         
     # Load the actionshistory
@@ -72,21 +72,16 @@ def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 2
     tokens.site = tokens.site.str.encode('utf-8')
     
     
-    if mode == 'tokens':
-        print( 'Aggregating tokens' )
-        # Pad the tokens
-        #tokens['error_msg_tokenized'] = list(pad_sequences(tokens['error_msg_tokenized'], maxlen=max_length, 
-        #                                         padding="post", truncating="post"))
-        # Aggregate the message per task, error, site
-        tokens = tokens.groupby(['task_name', 'error', 'site'], as_index=False)['error_msg_tokenized', 'exit_codes',
-                                                                                'steps_counter',
-                                                                                'error_type'].agg(lambda x: list(x))
+    print( 'Aggregating tokens' )
+    # Pad the tokens
+    #tokens['error_msg_tokenized'] = list(pad_sequences(tokens['error_msg_tokenized'], maxlen=max_length, 
+    #                                         padding="post", truncating="post"))
+    # Aggregate the message per task, error, site
+    tokens = tokens.groupby(['task_name', 'error', 'site'], as_index=False)['error_msg_tokenized', 'exit_codes',
+                                                                            'steps_counter', 'error_type', 
+                                                                           'avg_w2v'].agg(lambda x: list(x))
   
-        
-    else:
-        print( 'Aggregating w2v average' )
-        tokens = tokens.groupby(['task_name', 'error', 'site'], as_index=False)['avg_w2v'].agg(lambda x: list(x))
-        
+             
     print( 'Merging the frames' )
     sparse_frame = pd.merge( actionshist_keys, tokens, on = ['task_name', 'error', 'site'], how='left')
     
@@ -100,21 +95,17 @@ def create_input( path_actionshist, path_tokens, mode = 'tokens', max_length = 2
     
     
     print( 'Aggregating the frames' )
-    if mode == 'tokens':
-        #sparse_frame['error_msg_tokenized'] = sparse_frame['error_msg_tokenized'].replace(np.nan, 0, regex=True)
-        sparse_frame = sparse_frame.groupby(['task_name', 'label'], as_index=False)['error', 'site', 'site_state', 'count',
-                                                                                    'error_msg_tokenized','exit_codes',
-                                                                                    'steps_counter',
-                                                                                    'error_type'].agg(lambda x: list(x))
-    else:
-        sparse_frame = sparse_frame.groupby(['task_name', 'label'], as_index=False)['error', 'site', 'site_state',
-                                                                                    'count', 'avg_w2v'].agg(lambda x: list(x))
+    #sparse_frame['error_msg_tokenized'] = sparse_frame['error_msg_tokenized'].replace(np.nan, 0, regex=True)
+    sparse_frame = sparse_frame.groupby(['task_name', 'label'], as_index=False)['error', 'site', 'site_state', 'count',
+                                                                                'error_msg_tokenized','exit_codes',
+                                                                                'steps_counter', 'error_type',
+                                                                                'avg_w2v'].agg(lambda x: list(x))
     
         
     if store == True:
         print( 'Storing the frame' )
         
-        outfile = store_path + 'input_' + mode + '.h5'
+        outfile = store_path + 'input' + '.h5'
         sparse_frame.to_hdf( outfile , 'frame')
         site_frame.to_hdf( outfile , 'frame2')
         codes_frame.to_hdf( outfile, 'frame3')

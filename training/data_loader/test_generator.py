@@ -131,10 +131,8 @@ def setup_count_matrix( good, bad, codes, sites ):
     return matrix
 
 
-def setup_msg_matrix(codes, sites, errors, site, error_message_sequences, max_msg, pad_dim):
+def setup_msg_matrix(codes_index, sites_index, errors, sites, error_message_sequences, max_msg, pad_dim):
     
-    print 'New'
-    print errors, sites, error_message_sequences
     
     def pad_along_axis(array, pad_dim, axis=0):
 
@@ -153,28 +151,22 @@ def setup_msg_matrix(codes, sites, errors, site, error_message_sequences, max_ms
         return b
     
     
-    unique_sites = len(list(set(sites.values())))
-    unique_codes = len(list(set(codes.values())))
+    unique_sites = len(list(set(sites_index.values())))
+    unique_codes = len(list(set(codes_index.values())))
     error_site_tokens = np.zeros((1, unique_codes, unique_sites, max_msg, pad_dim))
     
     for error, site, error_message_sequence in zip( errors, sites, error_message_sequences ):
         
         if isinstance(error_message_sequence, (list,)):
-            print error, site, error_message_sequence
             # Loop over the error message sequence
             for counter, error_message in enumerate(error_message_sequence):
 
-            
-       
                 # Pad the error message
                 error_message = pad_along_axis(error_message, pad_dim)
                 if counter == max_msg:
                     break    
-                #print type(error_message)
-                try:
-                    error_site_tokens[1, codes[error], sites[site], counter ] = error_message
-                except:
-                    pass #print codes, sites, error, site, counter, error_message
+                error_site_tokens[0, codes_index[error], sites_index[site], counter ] = error_message
+                #print codes_index[error], error, sites_index[site], site, counter
                 
     return error_site_tokens
 
@@ -193,8 +185,8 @@ def t_matrix_setup( actionshist, ml_input, codes_index, sites_index, i_task ):
     test_matrix_count_std = setup_count_matrix( good_sites, bad_sites, codes_index, sites_index)  
     
     # Matrix for the message
-    print ml_input_task
-    print ml_input_task['error']
+    #print ml_input_task
+    #print ml_input_task['error']
     test_matrix_msg_std = setup_msg_matrix( codes_index, sites_index, ml_input_task_l['error'], ml_input_task_l['site'], 
                                            ml_input_task_l['error_msg_tokenized'], max_msg, padding_dim )
     
@@ -208,23 +200,11 @@ def t_matrix_setup( actionshist, ml_input, codes_index, sites_index, i_task ):
     # Assert that the arrays are the same
     np.testing.assert_array_equal(test_matrix_count_std, test_matrix_count_gen)
     np.testing.assert_array_equal(test_matrix_msg_std, test_matrix_msg_gen)
-    
     return True
 
 
-def test( input_path='/eos/user/l/llayer/AIErrorLogAnalysis/data/input/', 
-         actionshist_path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/actionshist/actionshistory_300719.json', 
+def test( input_ml, actionshist, codes_index, sites_index,
          count_test = False, batch_test = False, matrix_setup_test = False, n_matrices = 10):
-    
-    # Load the input
-    mode='tokens'
-    input_ml = pd.read_hdf(input_path + 'input_' + mode + '.h5', 'frame')
-    sites = pd.read_hdf(input_path + 'input_' + mode + '.h5', 'frame2')
-    codes = pd.read_hdf(input_path + 'input_' + mode + '.h5', 'frame3')
-    sites_index, codes_index = index.to_index(list(sites['site']), list(codes['error']))
-    
-    # Load the actionshist
-    actionshist = load_data(actionshist_path)
     
     if matrix_setup_test == True:
         
