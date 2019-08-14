@@ -203,8 +203,10 @@ def t_matrix_setup( actionshist, ml_input, codes_index, sites_index, i_task ):
     return True
 
 
-def test( input_ml, actionshist, codes_index, sites_index,
-         count_test = False, batch_test = False, matrix_setup_test = False, n_matrices = 10):
+def test( input_ml, actionshist, codes, sites, count_test = False, batch_test = False, 
+         matrix_setup_test = False, n_matrices = 10):
+    
+    sites_index, codes_index = index.to_index(list(sites['site']), list(codes['error']))
     
     if matrix_setup_test == True:
         
@@ -230,6 +232,7 @@ def test( input_ml, actionshist, codes_index, sites_index,
         t_batch_gen(generator, total_counts, msg_counts)
         print( 'Pass batch generator test in default mode' )
         
+        """
         # Test the site summed setup
         generator = gen.InputBatchGenerator(input_ml, 'label', codes_index, sites_index, padding_size, batch_size=10, 
                                            mode = 'sum_sites')
@@ -240,7 +243,7 @@ def test( input_ml, actionshist, codes_index, sites_index,
                                            mode = 'sum_sites_errors')
         t_batch_gen(generator, total_counts, msg_counts)
         print( 'Pass batch generator test in sum_sites_errors mode' )
-
+        """
         
         
         
