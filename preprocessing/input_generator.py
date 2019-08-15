@@ -27,7 +27,7 @@ def encode_sites_unicode( site ):
 
 def get_site_info(frame):
     
-    non_neg_sites = list(frame[frame['error'] != '-1'.encode('utf-8') ]['site'].unique())
+    non_neg_sites = list(frame[frame['error'] != '-1'.decode('utf-8') ]['site'].unique())
     counts = frame.groupby('site')['count'].sum().to_frame('counts').reset_index()
     frequency = frame['site'].value_counts().to_frame('frequency').reset_index().rename(columns={'index': 'site'})
     
