@@ -64,7 +64,7 @@ def prune_to_index(codes, sites, only_unknown = False, counts = False, error_thr
     codes_index = merge_dicts(good_codes_index, pruned_codes_index)
     sites_index = merge_dicts(good_sites_index, pruned_sites_index)
     
-    return codes_index, sites_index
+    return sites_index, codes_index
 
 
 """

@@ -9,11 +9,9 @@ from keras.utils import to_categorical
 class InputBatchGenerator(object):
     
     def __init__(self, frame, label, codes, sites, pad_dim, batch_size = 1, max_msg = 5, max_msg_per_error = 50, 
-                 max_msg_per_wf = 200, mode = 'default', only_counts = False, averaged = False, first_only = False,
-                 count_msg = True):
+                 max_msg_per_wf = 200, mode = 'default', averaged = False, first_only = False, only_msg = True):
         
         self.frame = frame
-        self.frame['unique_index'] = self.frame.reset_index().index
         self.n_tasks = len(frame)
         self.label = label
         self.batch_size = batch_size
@@ -26,8 +24,7 @@ class InputBatchGenerator(object):
         self.mode = mode
         self.averaged = averaged
         self.first_only = first_only
-        self.only_counts = only_counts
-        self.count_msg = count_msg
+        self.only_msg = only_msg
         self.unique_sites = len(list(set(self.sites.values())))
         self.unique_codes = len(list(set(self.codes.values())))
         self.n_tasks = len(frame)
@@ -151,8 +148,9 @@ class InputBatchGenerator(object):
     
             
             # Fill the counts
-            self.fill_counts(index_matrix, error, site, site_state, count)
-            
+            if self.only_msg == False:
+                self.fill_counts(index_matrix, error, site, site_state, count)
+           
             if self.only_counts == True:
                 continue
             
@@ -234,7 +232,7 @@ class InputBatchGenerator(object):
                                                                           batch['site_state'], batch[tokens_key], 
                                                                           batch['exit_codes']))]
         
-        if self.count_msg == True:
+        if self.only_msg == False:
             return [self.error_site_tokens, self.error_site_counts]   
         else:
             return self.error_site_tokens
