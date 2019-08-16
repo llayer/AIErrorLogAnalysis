@@ -67,10 +67,10 @@ class InputBatchGenerator(object):
         
         # Loop over the error message sequence
         for counter, error_message in enumerate(error_message_sequence):
-            
+                                    
             # Stop when maximal message is reached
-            if error != exit_code:
-                        
+            if int(error) == exit_code[counter]:
+                                
                 # Pad the error message
                 if self.averaged == False:
                     error_message = self.pad_along_axis(error_message)

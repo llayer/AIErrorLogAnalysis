@@ -90,12 +90,15 @@ def t_batch_gen(gen, total_counts, msg_counts):
     
     for X,y in gen.gen_batches():
         
+        print( X[0].shape )
+        
         n_msgs = X[0].sum(axis=4).sum(axis=3) > 0
         sum_msg.append(n_msgs.sum())
         sum_counts.append(X[1].sum())
         
-    #print np.array(sum_counts).sum()
-    #print np.array(sum_msg).sum()
+    print np.array(sum_counts).sum()
+    print np.array(sum_msg).sum()
+    print total_counts, msg_counts
     assert( np.array(sum_counts).sum() == total_counts )
     assert( np.array(sum_msg).sum() == msg_counts)
 
@@ -203,7 +206,7 @@ def t_matrix_setup( actionshist, ml_input, codes_index, sites_index, i_task ):
     return True
 
 
-def test( input_ml, actionshist, codes, sites, count_test = False, batch_test = False, 
+def test( input_ml, actionshist, codes, sites, count_test = False, batch_test_msg = False, batch_test_w2v = False,
          matrix_setup_test = False, n_matrices = 10):
     
     sites_index, codes_index = index.to_index(list(sites['site']), list(codes['error']))
@@ -222,7 +225,7 @@ def test( input_ml, actionshist, codes, sites, count_test = False, batch_test = 
         total_counts, total_keys = load_actionshist_counts(actionshist)
         t_count_matrix(input_ml, codes, sites, total_counts, total_keys)
         
-    if batch_test == True:
+    if batch_test_msg == True:
 
         total_counts, total_keys = load_actionshist_counts(actionshist)
         msg_counts = load_token_counts()
@@ -245,6 +248,16 @@ def test( input_ml, actionshist, codes, sites, count_test = False, batch_test = 
         print( 'Pass batch generator test in sum_sites_errors mode' )
         """
         
+    if batch_test_w2v == True:
+
+        total_counts, total_keys = load_actionshist_counts(actionshist)
+        msg_counts = load_token_counts()
+        # Test the standard setup
+        padding_size = 50
+        generator = gen.InputBatchGenerator(input_ml, 'label', codes_index, sites_index, padding_size, batch_size=100, 
+                                           averaged = True, count_msg = True, first_only = True)
+        t_batch_gen(generator, total_counts, msg_counts)
+        print( 'Pass batch generator test in default mode' )        
         
         
     

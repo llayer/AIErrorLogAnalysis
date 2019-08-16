@@ -72,6 +72,9 @@ def create_input( path_actionshist, path_tokens, max_length = 200, store = True,
     tokens.error = tokens.error.str.encode('utf-8')
     tokens.site = tokens.site.str.encode('utf-8')
     
+    # Store releavant info for the tokens
+    msg_error_frame = pd.DataFrame(tokens['error'].unique(),  columns=['errors_msg'])
+    msg_sites_frame = pd.DataFrame(tokens['site'].unique(),  columns=['sites_msg'])
     
     print( 'Aggregating tokens' )
     # Pad the tokens
@@ -110,6 +113,8 @@ def create_input( path_actionshist, path_tokens, max_length = 200, store = True,
         sparse_frame.to_hdf( outfile , 'frame')
         site_frame.to_hdf( outfile , 'frame2')
         codes_frame.to_hdf( outfile, 'frame3')
+        msg_error_frame.to_hdf( outfile, 'frame4')
+        msg_sites_frame.to_hdf( outfile, 'frame5')
                   
     return sparse_frame, site_frame, codes_frame
         
