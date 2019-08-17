@@ -19,7 +19,7 @@ MEMORY_LIMIT = 80.0
 def memory_kill(verbose = 0):
     
     mem = psutil.virtual_memory()
-    if verbose == 1:
+    if verbose > 0:
         print( 'Virtual memory:', mem[2])
     if mem[2] > MEMORY_LIMIT:
         return True
@@ -29,12 +29,17 @@ def memory_kill(verbose = 0):
 
 class FitControl(keras.callbacks.Callback):
 
-    def __init__(self, val_gen = None, patience = 3, mode='min', multiinput = True, early_stopping = True, verbose = 0):
+    def __init__(self, val_gen = None, patience = 3, mode='max', multiinput = True, early_stopping = True, 
+                 store_best = False, store_best_roc = False, verbose = 0):
 
         super().__init__()
         self.validation_gen = val_gen 
         self.patience = patience
         self.verbose = verbose
+        self.store_best = store_best
+        self.store_best_roc = store_best_roc
+        self.fpr_best = None
+        self.tpr_best = None
         self.multiinput = multiinput
         self.early_stopping = early_stopping
         self.best_score = -np.inf if mode == 'max' else np.inf
@@ -67,8 +72,10 @@ class FitControl(keras.callbacks.Callback):
                 y_pred = (np.asarray(self.model.predict([self.validation_data[0], self.validation_data[1]])))
                 y_targ = self.validation_data[2]
             else:
+                                
                 y_pred = (np.asarray(self.model.predict(self.validation_data[0])))
                 y_targ = self.validation_data[1]
+                
             
             #y_pred_max = np.argmax(y_pred, axis=-1)
             
@@ -78,18 +85,24 @@ class FitControl(keras.callbacks.Callback):
         
         score = roc_auc_score(y_targ, y_pred)
         self.scores.append(score)
-        if self.verbose == 1:
+        if self.verbose > 0:
             print('rocauc:', score )
         
-        # Early stopping
-        if self.early_stopping == True:
-            if self.is_better(score, self.best_score):
-                self.wait = 0
-                self.best_score = score
-            else:
-                self.wait += 1
-            if self.wait > self.patience:
-                self.model.stop_training = True
+        # Early stopping and saving
+        if self.is_better(score, self.best_score):
+            self.wait = 0
+            self.best_score = score
+            # Save the model
+            if self.store_best == True:
+                self.model.save(filepath = 'model.h5', overwrite=True)
+            if self.store_best_roc == True:
+                fpr, tpr, _ = roc_curve(y_test, y_pred)
+                self.fpr_best = fpr
+                self.tpr_best = tpr
+        else:
+            self.wait += 1
+        if self.wait > self.patience and self.early_stopping == True:
+            self.model.stop_training = True
 
            
             

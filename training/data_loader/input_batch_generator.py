@@ -9,7 +9,7 @@ from keras.utils import to_categorical
 class InputBatchGenerator(object):
     
     def __init__(self, frame, label, codes, sites, pad_dim, batch_size = 1, max_msg = 5, max_msg_per_error = 50, 
-                 max_msg_per_wf = 200, mode = 'default', averaged = False, first_only = False, only_msg = True):
+                 max_msg_per_wf = 200, mode = 'default', averaged = False, first_only = False, only_msg = False):
         
         self.frame = frame
         self.n_tasks = len(frame)
