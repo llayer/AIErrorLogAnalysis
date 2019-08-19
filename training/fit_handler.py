@@ -9,7 +9,7 @@ from models import baseline_model
 from models import w2v_model
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, StratifiedKFold
-#from models import nlp_model
+from models import nlp_model
 from keras import backend as K
 from skopt.utils import use_named_args
 from skopt import gp_minimize
@@ -18,6 +18,16 @@ from data_loader import input_batch_generator
 from data_loader import index
 from imblearn.over_sampling import SMOTE
 from sklearn.utils import class_weight
+
+"""
+from keras.backend.tensorflow_backend import set_session
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
+config.log_device_placement = True  # to log device placement (on which device the operation ran)
+sess = tf.Session(config=config)
+set_session(sess)  # set this TensorFlow session as the default session for Keras
+"""
 
 class FitHandler(object):
     
@@ -58,6 +68,9 @@ class FitHandler(object):
         
         if self.model_type == 'nlp_w2v':
             return w2v_model.W2V(2, self.dim_errors, self.dim_sites, self.embedding_dim)        
+
+        if self.model_type == 'nlp_simple':
+            return nlp_model.NLP_SingleMsg(2, self.dim_errors, self.dim_sites, self.embedding_dim) 
         
         
     def create_dir(self, overwrite):
@@ -136,7 +149,7 @@ class FitHandler(object):
         
         if y is None:
             X_train, X_test = self.split(X, test_size = test_size)
-            self.train_in_batches(X_train, X_test, batch_size, max_epochs = max_epochs)
+            self.train_in_batches(X_train, X_test, batch_size, batch_size_val = batch_size, max_epochs = max_epochs)
         else:
             X_train, X_test, y_train, y_test = self.split(X, y, test_size = test_size)              
             self.train( X_train, y_train, X_test, y_test, max_epochs = max_epochs, batch_size = batch_size, 
@@ -157,11 +170,9 @@ class FitHandler(object):
         return generator.get_counts_matrix()
     
         
-    def train_in_batches(self, X_train, X_test, batch_size_train, model_param = None, batch_size_val = 100, max_epochs = 20,
+    def train_in_batches(self, X_train, X_test, batch_size_train, model_param = None, batch_size_val = 10, max_epochs = 20,
                          early_stopping = True):
-        
-        if self.use_smote == True:
-            X_train, y_train = self.smote(X_train, y_train)         
+            
         
         class_weights = class_weight.compute_class_weight('balanced', np.unique( X_train['label']), X_train['label'])
         

@@ -6,11 +6,13 @@ if module_path not in sys.path:
 
 import numpy as np
 from keras.layers import Embedding, Input, Dense, LSTM, GRU, Bidirectional, TimeDistributed, Dropout, Flatten, Reshape
-from keras.layers import average, Concatenate, Lambda
+from keras.layers import average, Concatenate, Lambda, CuDNNLSTM
 from keras.models import Model
 from keras.optimizers import Adam
 from models.base_model import BaseModel
 from keras import backend as K
+K.set_floatx('float32')
+print(K.floatx())
 
 class NLP_Model(BaseModel):
     
@@ -27,7 +29,7 @@ class NLP_Model(BaseModel):
         self.max_msg = max_msg
         self.debug = debug
         self.model_params = {
-            'learning_rate':0.1
+            'learning_rate':0.001
         }
         
         
@@ -44,7 +46,8 @@ class NLP_Model(BaseModel):
         
         word_input = Input(shape = (self.max_sequence_length, ), dtype='float32')
         word_sequences = self.get_embedding_layer()(word_input)
-        word_lstm = LSTM(10)(word_sequences)
+        word_lstm = CuDNNLSTM(10)(word_sequences)
+        #print word_lstm
         wordEncoder = Model(word_input, word_lstm)
         
         return wordEncoder
@@ -166,8 +169,8 @@ class NLP_SingleMsg(BaseModel):
     
     def __init__(self, num_classes, num_error, num_sites, max_sequence_length, debug = False):
         
-        self.embedding_matrix = np.load('/nfshome/llayer/data/embedding_matrix.npy')
-        
+        embedding_matrix = np.load('/nfshome/llayer/data/embedding_matrix.npy')
+        self.embedding_matrix = embedding_matrix.astype('float32')
         self.max_sequence_length = max_sequence_length
         self.num_error = num_error
         self.num_sites = num_sites
@@ -175,7 +178,7 @@ class NLP_SingleMsg(BaseModel):
         self.max_senten_num = num_error * num_sites
         self.debug = debug
         self.model_params = {
-            'learning_rate':0.1
+            'learning_rate':0.0001
         }
         
         
@@ -184,7 +187,7 @@ class NLP_SingleMsg(BaseModel):
         
         dims_embed = self.embedding_matrix.shape
         embedding = Embedding(dims_embed[0], dims_embed[1], weights=[self.embedding_matrix], \
-                              input_length = self.max_sequence_length, trainable = False)
+                              input_length = self.max_sequence_length, mask_zero = True, trainable = False)
     
         return embedding
     
@@ -192,7 +195,9 @@ class NLP_SingleMsg(BaseModel):
         
         word_input = Input(shape = (self.max_sequence_length, ), dtype='float32')
         word_sequences = self.get_embedding_layer()(word_input)
+        #word_lstm = CuDNNLSTM(10)(word_sequences)
         word_lstm = LSTM(10)(word_sequences)
+        print( word_lstm )
         wordEncoder = Model(word_input, word_lstm)
         
         return wordEncoder
@@ -203,7 +208,7 @@ class NLP_SingleMsg(BaseModel):
     
     def site_encoder_model( self ):
         
-        exit_code_input = Input(shape=( self.num_sites, 12, ), dtype='float32')
+        exit_code_input = Input(shape=( self.num_sites, 10, ), dtype='float32')
         flattened = Flatten()(exit_code_input)
         dense = Dense(10, activation = "relu", kernel_initializer="normal")(flattened)
         site_encoder = Model(exit_code_input, dense)
@@ -227,14 +232,15 @@ class NLP_SingleMsg(BaseModel):
         
         if self.debug: print( sent_encoder )
         
+        """
         # Shape back to concat the matrix
         sent_encoder_reshaped = Reshape(( self.num_error * self.num_sites, 10))(sent_encoder)
         
         if self.debug: print( sent_encoder_reshaped )
-  
+        """
             
         # Reshape the error sites matrix
-        sentence_averaged_reshaped = Reshape(( self.num_error , self.num_sites, 10))(sentence_averaged)
+        sentence_averaged_reshaped = Reshape(( self.num_error , self.num_sites, 10))(sent_encoder)
         
         if self.debug: print( sentence_averaged_reshaped )
         
