@@ -12,6 +12,7 @@ from keras.optimizers import Adam
 from models.base_model import BaseModel
 from keras import backend as K
 import keras
+from skopt.space import Real, Categorical, Integer
 
 
 
@@ -102,11 +103,11 @@ class ErrorSiteAverage(BaseModel):
         self.num_classes = num_classes
         self.embedding_dim = embedding_dim
         self.model_params = {
-            'learning_rate':0.005675,
-            'dense_units':35,
             'dense_layers' : 6,
+            'dense_units':35,
             'regulizer_value' : 0.001000,
-            'dropout_value' : 0.052315
+            'dropout_value' : 0.052315,
+            'learning_rate':0.005675
         }        
         
         
@@ -143,6 +144,20 @@ class ErrorSiteAverage(BaseModel):
         self.model.compile( loss = 'binary_crossentropy', #'categorical_crossentropy',
                             optimizer = keras.optimizers.Adam(lr=learning_rate), metrics = ['accuracy'])  
     
+    def get_skopt_dimensions(self):
+        ''' initializes self.dimensions list
+            !!! order of elements must be the same as self.create_model() params !!!
+            !!! name fields must be the same as keys in self.model_params dict   !!!
+        '''
+        dimensions = [
+            Integer(     low=1,    high=15,                        name='dense_layers'      ),
+            Integer(     low=5,    high=75,                        name='dense_units'       ),
+            Real(        low=1e-3, high=0.9,  prior="log-uniform", name='regulizer_value'   ),
+            Real(        low=0.01, high=0.5,                       name='dropout_value'     ),
+            Real(        low=1e-5, high=1e-2, prior='log-uniform', name='learning_rate'     )
+        ]    
+        return dimensions
+    
     
     
 class W2V(BaseModel):
@@ -155,15 +170,17 @@ class W2V(BaseModel):
         self.num_classes = num_classes
         self.embedding_dim = embedding_dim
         self.model_params = {
-            'learning_rate':0.005675,
-            'dense_units':35,
+            
             'dense_layers' : 6,
+            'dense_units':35,
             'regulizer_value' : 0.001000,
-            'dropout_value' : 0.052315
+            'dropout_value' : 0.052315,
+            'learning_rate':0.005675
         }        
         
         
-    def create_model( self, learning_rate, dense_units, dense_layers, regulizer_value, dropout_value ):
+    def create_model( self, dense_layers, dense_units, regulizer_value, dropout_value, learning_rate ):
+        
         
         # Input word2vec
         w2v_in = Input(shape=(self.num_error, self.num_sites, self.embedding_dim))
@@ -189,4 +206,17 @@ class W2V(BaseModel):
         self.model.compile( loss = 'binary_crossentropy', #'categorical_crossentropy',
                             optimizer = keras.optimizers.Adam(lr=learning_rate), metrics = ['accuracy'])   
     
-
+    def get_skopt_dimensions(self):
+        ''' initializes self.dimensions list
+            !!! order of elements must be the same as self.create_model() params !!!
+            !!! name fields must be the same as keys in self.model_params dict   !!!
+        '''
+        dimensions = [
+            Integer(     low=1,    high=15,                        name='dense_layers'      ),
+            Integer(     low=5,    high=75,                        name='dense_units'       ),
+            Real(        low=1e-3, high=0.9,  prior="log-uniform", name='regulizer_value'   ),
+            Real(        low=0.01, high=0.5,                       name='dropout_value'     ),
+            Real(        low=1e-5, high=1e-2, prior='log-uniform', name='learning_rate'     )
+        ]
+        
+        return dimensions

@@ -53,8 +53,8 @@ class FitHandler(object):
         if self.model_type == 'baseline':
             return baseline_model.FF(2, self.dim_errors, self.dim_sites)
         
-        if self.model_type == 'nlp_simple_avg':
-            return w2v_model.SimpleAverage(2, self.dim_errors, self.dim_sites, self.embedding_dim)
+        if self.model_type == 'nlp_w2v_counts':
+            return w2v_model.ErrorSiteAverage(2, self.dim_errors, self.dim_sites, self.embedding_dim)
         
         if self.model_type == 'nlp_w2v':
             return w2v_model.W2V(2, self.dim_errors, self.dim_sites, self.embedding_dim)        
@@ -238,7 +238,7 @@ class FitHandler(object):
     
     
     def kfold_val(self, X, y=None, model_param = None, kfold_splits = 5, kfold_function=KFold, 
-                  max_epochs=100, batch_size=256, seed=42, verbose=0, early_stopping=False):
+                  max_epochs=20, batch_size=100, seed=42, verbose=0, early_stopping=True):
 
         mem = psutil.virtual_memory()
         print( 'Memory:', mem[2] )
@@ -278,9 +278,11 @@ class FitHandler(object):
         model = self.get_model()
         dimensions = model.get_skopt_dimensions()
         prior_values = [a for a in model.model_params.values()]
-        prior_values.append( batch_size )
         prior_names = [a for a in model.model_params.keys()]
-        prior_names.append( 'batch_size' )
+        
+        if self.train_on_batch == False:
+            prior_values.append( batch_size )
+            prior_names.append( 'batch_size' )
         del model
 
         global num_skopt_call
@@ -295,10 +297,10 @@ class FitHandler(object):
             if verbose != 0: print('\n \t ::: {} SKOPT CALL ::: \n'.format(num_skopt_call+1))
             print(p)
             
-            batch_size = p.pop('batch_size', None)
             
             if cv == True:
                 if self.train_on_batch == False:
+                    batch_size = p.pop('batch_size', None)
                     cvscores = self.kfold_val(X, y, model_param = p, kfold_splits=kfold_splits, 
                                               max_epochs = max_epochs, batch_size = batch_size,
                                               early_stopping = True)
@@ -314,13 +316,15 @@ class FitHandler(object):
                 
             else:
                 if self.train_on_batch == False:
+                    batch_size = p.pop('batch_size', None)
                     X_train, X_test, y_train, y_test = self.split(X, y, test_size = test_size) 
                     score = self.train(  X_train, y_train, X_test, y_test, model_param = p, max_epochs = max_epochs, 
                                                 batch_size = batch_size, early_stopping = True)
                 else:
+                    #batch_size = batch_size
                     X_train, X_test = self.split(X, test_size = test_size)              
-                    score = self.train_in_batches( p, X_train, X_test, model_param = p, max_epochs = max_epochs, 
-                                                         batch_size_train = batch_size, early_stopping = True)               
+                    score = self.train_in_batches( X_train, X_test, 100, model_param = p, max_epochs = max_epochs, 
+                                                   early_stopping = True)               
                     
                 result = -1 * score
                 print( result )
