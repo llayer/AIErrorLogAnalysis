@@ -4,25 +4,27 @@ module_path = os.path.abspath(os.path.join('..'))
 if module_path not in sys.path:
     sys.path.append(module_path)
 import numpy as np
+import keras
 from keras.layers import Embedding, Input, Dense, LSTM, GRU, Bidirectional, TimeDistributed, Dropout, Flatten, Reshape
-from keras.layers import average, Concatenate, Lambda, CuDNNLSTM, CUDNNGRU
+from keras.layers import average, Concatenate, Lambda, CuDNNLSTM, CuDNNGRU, Conv1D, GlobalMaxPooling1D, MaxPooling1D
 from keras.models import Model
 from keras.optimizers import Adam
 from models.base_model import BaseModel
 from models.attention_context import AttentionWithContext
 from keras import backend as K
 from keras.layers import BatchNormalization
+from skopt.space import Real, Categorical, Integer
 K.set_floatx('float32')
 print(K.floatx())
 
     
     
-class NLP_SingleMsg(BaseModel):
+class NLP(BaseModel):
     
     
     def __init__(self, num_classes, num_error, num_sites, max_sequence_length, cudnn = False, batch_norm = False, 
-                 train_embedding = False, word_encoder = 'LSTM', encode_sites = True,
-                 include_counts = False, debug = False):
+                 train_embedding = False, word_encoder = 'LSTM', encode_sites = True, attention = False,
+                 include_counts = False, verbose = 1):
         
         embedding_matrix = np.load('/nfshome/llayer/data/embedding_matrix.npy')
         self.embedding_matrix = embedding_matrix.astype('float32')
@@ -32,51 +34,62 @@ class NLP_SingleMsg(BaseModel):
         self.num_classes = num_classes
         self.max_senten_num = num_error * num_sites
         self.cudnn = cudnn
+        self.attention = attention
         self.word_encoder = word_encoder
         self.encode_sites = encode_sites
         self.batch_norm = batch_norm
         self.include_counts = include_counts
         self.train_embedding = train_embedding
-        # Hyperparameters that are fixed
+        self.verbose = verbose
+        # Hyperparameters
         self.hp = {
+            # Regularization
             'l2_regulizer': keras.regularizers.l2(0.0001),
             'dropout':0.2,
-            'rec_dropout':0.0,
+            # Conv1D
             'filters':256,
             'kernel_size':3,
+            'conv_layers':3,
+            'max_pooling':3,
             'units_conv':10,
+            # RNN with optional attention
             'att_units':10,
+            'rec_dropout':0.0,
             'rnn': LSTM, #TRY GRU
             'rnncud': CuDNNLSTM, # TRY CuDNNGRU
             'rnn_units' : 10,
             'rnn_dropout': None,
+            # Site encoding
             'activation_site': 'relu', #TRY linear
             'units_site': 10,
+            # Final layers
             'dense_layers': 3,
             'dense_units': 20,
-        }
-        # Hyperparameters that will be tuned
-        self.model_params = {
             'learning_rate':0.0001
-        }
+                    }
+
         
         
     def set_hyperparameters(self, tweaked_instances):
-        """Set hyperparameters of HAN model.
-        Keywords arguemnts:
-        tweaked_instances -- dictionary of all those keys you want to change
-        """
+
         for  key, value in tweaked_instances.items():
-            if key in self.hyperparameters:
-                self.hyperparameters[key] = value
+            if key in self.hp:
+                self.hp[key] = value
             else:
                 raise KeyError(key + ' does not exist in hyperparameters')
-      
+
+            
+    def print_hyperparameters(self):
+
+        print('Hyperparameter\tCorresponding Value')
+        for key, value in self.hp.items():
+            print(key, '\t\t', value)
+        
         
     def get_embedding_layer( self ):
         
         dims_embed = self.embedding_matrix.shape
-        if self.cudnn == True:
+        if self.cudnn == True or self.word_encoder == 'Conv1D':
             embedding = Embedding(dims_embed[0], dims_embed[1], weights=[self.embedding_matrix], \
                                   input_length = self.max_sequence_length, trainable = self.train_embedding)
         else:
@@ -90,7 +103,7 @@ class NLP_SingleMsg(BaseModel):
         
         #TODO add recurrent_dropout
         
-        word_input = Input(shape = (self.max_sequence_length, ), dtype='float32')
+        word_input = Input(shape = ( self.max_sequence_length, ), dtype='float32')
         word_sequences = self.get_embedding_layer()(word_input)
                 
         if self.attention == False:
@@ -100,7 +113,7 @@ class NLP_SingleMsg(BaseModel):
                 word_lstm = self.hp['rnn'](self.hp['rnn_units'], kernel_regularizer=self.hp['l2_regulizer'],
                                           recurrent_dropout = self.hp['rec_dropout'])(word_sequences)
             wordEncoder = Model(word_input, word_lstm)
-        else
+        else:
             if self.cudnn == True:
                 word_lstm = self.hp['rnncud'](self.hp['rnn_units'], kernel_regularizer=self.hp['l2_regulizer'],
                                              return_sequences=True)(word_sequences)
@@ -118,13 +131,13 @@ class NLP_SingleMsg(BaseModel):
         
         #TODO add spatial dropout
         
-        word_input = Input(shape = (self.max_sequence_length, ), dtype='float32')
+        word_input = Input(shape = ( self.max_sequence_length, ), dtype='float32')
         word_sequences = self.get_embedding_layer()(word_input)
 
-        for i in range(conv_layers):
+        for i in range(self.hp['conv_layers']):
             word_sequences = Conv1D(self.hp['filters'], self.hp['kernel_size'], 
                                     activation='relu',kernel_regularizer=self.hp['l2_regulizer'])(word_sequences)
-            word_sequences = MaxPooling1D(3)(word_sequences)
+            word_sequences = MaxPooling1D(self.hp['max_pooling'])(word_sequences)
 
         word_sequences = GlobalMaxPooling1D()(word_sequences)
         word_sequences = Dense(self.hp['units_conv'], activation='relu',
@@ -134,19 +147,33 @@ class NLP_SingleMsg(BaseModel):
 
         return wordEncoder
     
-    
-    def site_word_encoder( self, units ):
+    """
+    def site_word_encoder( self ): #, units ):
+        
         
         exit_code_input = Input(shape=( self.num_sites, units ), dtype='float32')
-        flattened = Flatten()(exit_code_input)
-        dense = Dense(self.hp['units_site'], activation = self.hp['activation_site'], 
-                      kernel_regularizer=self.hp['l2_regulizer'])(flattened)
-        site_encoder = Model(exit_code_input, dense)
+        print( units )
+        print( exit_code_input )
+        flat = Flatten()(exit_code_input)
+        print( flat )
+        exit_code = Dense(self.hp['units_site'], activation = self.hp['activation_site'], 
+                      kernel_regularizer=self.hp['l2_regulizer'])(flat)
+        print( exit_code )
+        site_encoder = Model(exit_code_input, exit_code)
         
         return site_encoder
-    
-    
-    def create_model( self, learning_rate ):
+        
+        exit_code_input = Input(shape=( self.num_sites, 12, ), dtype='float32')
+        flattened = Flatten()(exit_code_input)
+        d = Dense(10, activation = "relu", kernel_initializer="normal")(flattened)
+        site_encoder = Model(exit_code_input, d)
+        return site_encoder
+    """
+        
+    def create_model( self ):
+        
+        if self.verbose == 1:
+            self.print_hyperparameters()
         
         # Input layers
         sent_input = Input(shape = (self.num_error, self.num_sites, self.max_sequence_length), dtype='float32')
@@ -155,24 +182,21 @@ class NLP_SingleMsg(BaseModel):
         sent_input_reshaped = Reshape(( self.num_error * self.num_sites, self.max_sequence_length))(sent_input)
         
         # Encode the words of the sentences
-        if self.lstm == True:
+        if self.word_encoder == 'LSTM':
+            encoder_units = self.hp['rnn_units']
             sent_encoder = TimeDistributed(self.word_encoder_lstm())(sent_input_reshaped)
-        else:
+        elif self.word_encoder == 'Conv1D':
+            encoder_units = self.hp['units_conv']
             sent_encoder = TimeDistributed(self.word_encoder_conv())(sent_input_reshaped)
-                
-        sent_encoder = Dropout(self.hp['dropout'])(sent_encoder)
+        else: 
+            print( 'No valid encoder' )    
             
+        sent_encoder = Dropout(self.hp['dropout'])(sent_encoder)
         if self.batch_norm == True:
             sent_encoder = BatchNormalization()(sent_encoder)
             
         # Reshape the error sites matrix
-        if self.word_encoder == 'LSTM':
-            encoder_units = self.hp['rnn_units']
-        elif self.word_encoder == 'Conv1D':
-            encoder_units = self.hp['units_conv']
-        else: 
-            print( 'No valid encoder' )
-            
+    
         sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, encoder_units))(sent_encoder)
         
         # Add the meta information
@@ -188,21 +212,22 @@ class NLP_SingleMsg(BaseModel):
         # Encode the site
         if self.encode_sites == True:
             
-            exit_code_site_repr = TimeDistributed(self.site_word_encoder( encoder_units + 2 ))(exit_code_site_repr)
+            exit_code_site_repr = Reshape(( self.num_error , self.num_sites * encoder_units))(exit_code_site_repr)
+            exit_code_encoder = TimeDistributed(Dense(self.hp['units_site'], activation = self.hp['activation_site'], 
+                      kernel_regularizer=self.hp['l2_regulizer']))(exit_code_site_repr)
 
-            exit_code_site_repr = Dropout(self.hp['dropout'])(exit_code_site_repr)
-
+            exit_code_encoder = Dropout(self.hp['dropout'])(exit_code_encoder)
             if self.batch_norm == True:
-                exit_code_site_repr = BatchNormalization()(exit_code_site_repr)
+                exit_code_encoder = BatchNormalization()(exit_code_encoder)
             
         # Flatten
-        flattened = Flatten()(exit_code_site_repr)
+        flattened = Flatten()(exit_code_encoder)
             
         # Dense
         dense = flattened
         for _ in range(self.hp['dense_layers']):
             
-            dense = Dense( units=dense_units, activation='relu', kernel_regularizer=self.hp['l2_regulizer'] )(dense)
+            dense = Dense( units=self.hp['dense_units'], activation='relu', kernel_regularizer=self.hp['l2_regulizer'] )(dense)
             dense = Dropout(self.hp['dropout'])(dense)
             if self.batch_norm == True:
                 dense = BatchNormalization()(dense)            
@@ -212,10 +237,10 @@ class NLP_SingleMsg(BaseModel):
                 
         # Final model
         self.model = Model(sent_input, preds)
-        self.model.compile( loss='binary_crossentropy', optimizer = Adam(lr = learning_rate) )
+        self.model.compile( loss='binary_crossentropy', optimizer = Adam(lr = self.hp['learning_rate']) )
         
         return self.model
-    
+ 
     
     def print_summary(self):
         
@@ -238,9 +263,12 @@ class NLP_SingleMsg(BaseModel):
         print()
         print()
         
-    def set_skopt_dimensions(self):
-        pass
-            
+    def get_skopt_dimensions(self):
+        
+        dimensions = [
+            Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     )
+        ]
+        return dimensions
 
 """
 class NLP_Sequence(BaseModel):
