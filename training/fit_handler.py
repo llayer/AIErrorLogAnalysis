@@ -204,7 +204,8 @@ class FitHandler(object):
         else:
             multiinput = True
         
-        control_callback = model_utils.FitControl(generator_test, mode = 'max', multiinput = multiinput, verbose=self.verbose)
+        control_callback = model_utils.FitControl(train_gen = generator_train, val_gen = generator_test, 
+                                                  mode = 'max', multiinput = multiinput, verbose=self.verbose)
         model.model.fit_generator(generator = generator_train.gen_inf_batches(), steps_per_epoch = steps_per_epoch,
                                   callbacks = [control_callback], epochs = max_epochs, class_weight = class_weights,
                                   verbose = self.verbose)

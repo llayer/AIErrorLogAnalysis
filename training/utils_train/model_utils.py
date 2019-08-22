@@ -29,11 +29,12 @@ def memory_kill(verbose = 0):
 
 class FitControl(keras.callbacks.Callback):
 
-    def __init__(self, val_gen = None, patience = 3, mode='max', multiinput = True, early_stopping = True, 
+    def __init__(self, train_gen = None, val_gen = None, patience = 3, mode='max', multiinput = True, early_stopping = True, 
                  store_best = False, store_best_roc = False, verbose = 0):
 
         super().__init__()
         self.validation_gen = val_gen 
+        self.training_gen = train_gen
         self.patience = patience
         self.verbose = verbose
         self.store_best = store_best
@@ -54,7 +55,8 @@ class FitControl(keras.callbacks.Callback):
         if memory_kill(self.verbose) == True:
             self.model.stop_training = True
         
-        # Calculate validation ROC
+        # Calculate validation ROC            
+        
         if self.validation_gen is not None:
             
             y_targ_batches = []
@@ -79,6 +81,20 @@ class FitControl(keras.callbacks.Callback):
             
             #y_pred_max = np.argmax(y_pred, axis=-1)
             
+        if self.training_gen is not None:
+            
+            y_targ_train_batches = []
+            y_pred_train_batches = []
+            for X,y in self.training_gen.gen_batches():
+                y_pred_train_batches.append(np.asarray(self.model.predict(X)))
+                y_targ_train_batches.append(y)
+
+            y_targ_train = np.concatenate(y_targ_train_batches)
+            y_pred_train = np.concatenate(y_pred_train_batches)  
+            
+            score_train = roc_auc_score(y_targ_train, y_pred_train)
+            if self.verbose > 0:
+                print('ROC train:', score_train )            
             
         #precision, recall, thresholds = precision_recall_curve(val_targ, val_predict)
         #monit = (auc(recall, precision), average_precision_score(val_targ, val_predict))
@@ -86,7 +102,7 @@ class FitControl(keras.callbacks.Callback):
         score = roc_auc_score(y_targ, y_pred)
         self.scores.append(score)
         if self.verbose > 0:
-            print('rocauc:', score )
+            print('ROC test:', score )
         
         # Early stopping and saving
         if self.is_better(score, self.best_score):
