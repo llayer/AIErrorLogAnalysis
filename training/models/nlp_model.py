@@ -58,7 +58,6 @@ class NLP(BaseModel):
             'rnn': LSTM, #TRY GRU
             'rnncud': CuDNNLSTM, # TRY CuDNNGRU
             'rnn_units' : 10,
-            'rnn_dropout': None,
             # Site encoding
             'activation_site': 'relu', #TRY linear
             'units_site': 10,
@@ -120,7 +119,7 @@ class NLP(BaseModel):
             else:
                 word_lstm = self.hp['rnn'](self.hp['rnn_units'], kernel_regularizer=self.hp['l2_regulizer'],
                                           recurrent_dropout = self.hp['rec_dropout'], return_sequences=True)(word_sequences)
-            word_dense = TimeDistributed(Dense(self.hp['att_units']), kernel_regularizer=self.hp['l2_regulizer'])(word_lstm)
+            word_dense = TimeDistributed(Dense(self.hp['att_units']))(word_lstm)
             word_att = AttentionWithContext()(word_dense)
             wordEncoder = Model(word_input, word_att)
         
@@ -207,7 +206,7 @@ class NLP(BaseModel):
             exit_code_site_repr = Concatenate(axis=3)([sent_encoder_reshaped, count_input])
         
         else:
-            exit_code_site_repr = sent_encoder_reshaped
+            exit_code_encoder = sent_encoder_reshaped
         
         # Encode the site
         if self.encode_sites == True:
@@ -262,8 +261,9 @@ class NLP(BaseModel):
         model.summary()
         print()
         print()
-        
-    def get_skopt_dimensions(self):
+    
+    @staticmethod
+    def get_skopt_dimensions():
         
         dimensions = [
             Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     )

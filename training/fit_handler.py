@@ -4,7 +4,7 @@ import keras
 import pandas as pd
 import numpy as np
 import psutil
-import setGPU
+#import setGPU
 from models import baseline_model
 from models import w2v_model
 from sklearn.model_selection import train_test_split
@@ -159,24 +159,24 @@ class FitHandler(object):
         return X, y
     
     
-    def test_training(self, X, y=None, model_param = None, batch_size = 10, max_epochs = 1, test_size=0.33):
+    def run_training(self, X, y=None, model_param = None, batch_size = 10, max_epochs = 1, test_size=0.33):
         
         if y is None:
             X_train, X_test = self.split(X, test_size = test_size)
-            self.train_in_batches(X_train, X_test, batch_size, model_param = model_param, 
+            score = self.train_in_batches(X_train, X_test, batch_size, model_param = model_param, 
                                   batch_size_val = batch_size, max_epochs = max_epochs)
         else:
             X_train, X_test, y_train, y_test = self.split(X, y, test_size = test_size)              
-            self.train( X_train, y_train, X_test, y_test, max_epochs = max_epochs, batch_size = batch_size, 
+            score = self.train( X_train, y_train, X_test, y_test, max_epochs = max_epochs, batch_size = batch_size, 
                        model_param = model_param, early_stopping = True)            
-    
+        return score
     
     def split(self, X, y=None, test_size=0.33):
         
         if y is not None:
-            return train_test_split(X, y, test_size = test_size,  stratify = y)   
+            return train_test_split(X, y, test_size = test_size,  stratify = y, random_state = 0)   
         else:
-            return train_test_split(X, test_size = test_size,  stratify = X['label'])
+            return train_test_split(X, test_size = test_size,  stratify = X['label'], random_state = 0)
     
     
     def count_matrix(self, X):
