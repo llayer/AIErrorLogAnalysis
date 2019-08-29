@@ -7,8 +7,9 @@ from create_actionshist_keys import *
 from actionshist_utils import *
 import numpy as np
 import pandas as pd
-#from  actionshist_utils import set_labels, get_exit_codes, get_sites
-from keras.preprocessing.sequence import pad_sequences
+
+    
+    
 
 def clean_error_type(error_type):
     
@@ -66,7 +67,15 @@ def create_input( path_actionshist, path_tokens, max_length = 200, store = True,
     # Get the error messages
     print( 'Loading tokens' )
     tokens = pd.read_hdf( path_tokens )
+    tokens = tokens.drop(['NumberOfThreads', 'NumberOfStreams', 'readTotalSecs', '_c0'], axis = 1)
     tokens['error_type'] = tokens['error_type'].apply(clean_error_type)
+    performance = [ 'peakvaluerss', 'peakvaluevsize', 'writeTotalMB', 'readPercentageOps', 'readAveragekB', 'readTotalMB',
+                   'readNumOps', 'readCachePercentageOps', 'readMBSec', 'writeTotalSecs', 'readTotalSecs', 'readMaxMSec',
+                   'TotalJobCPU', 'NumberOfStreams', 'TotalInitCPU', 'TotalEventCPU', 'AvgEventCPU', 'EventThroughput',
+                   'TotalInitTime', 'AvgEventTime', 'NumberOfThreads', 'MinEventCPU', 'MaxEventTime', 'TotalJobTime',
+                   'TotalLoopCPU', 'MinEventTime', 'MaxEventCPU']
+    tokens['performance'] = tokens[performance].apply(tuple, axis=1)  
+    tokens = tokens.drop(performance, axis = 1)
     tokens['avg_w2v'] = tokens['avg_w2v'].apply(lambda x:list( float(entry) for entry in x ))
     tokens.error = tokens.error.astype(str)
     tokens.error = tokens.error.str.encode('utf-8')
