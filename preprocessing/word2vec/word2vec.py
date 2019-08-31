@@ -74,14 +74,18 @@ def get_avg_vector(frame, model, tfidf = False):
     
     if tfidf == True:
         
-        frame['w2v_tfidf'] = frame['error_msg'].apply(average_vector_tfidf)
+        frame['avg_tfidf'] = frame['error_msg'].apply(average_vector_tfidf)
         
     else:
-        frame['avg_w2v'] = frame['error_msg'].apply(average_vector)
+        frame['avg'] = frame['error_msg'].apply(average_vector)
 
     
-def run_word2vec(tokens, minimum_count = -1, max_words = -1, algo = 1, embedding_size = 50, avg_vec = False,
-                 name = 'test', store=True):
+def run_word2vec(tokens, embedding_size = 50, minimum_count = -1, max_words = -1, algo = 'sg', model_path = 'test.model'):
+    
+    if algo == 'sg':
+        w2v_algo = 1
+    else:
+        w2v_algo = 0
     
     # Reduce vocabulary
     if minimum_count > 0 or max_words > 0:
@@ -92,13 +96,12 @@ def run_word2vec(tokens, minimum_count = -1, max_words = -1, algo = 1, embedding
             return words_cleaned
         tokens['error_msg'] = tokens['error_msg'].apply(clean_data, args=[reduced_vocab])
     
-    print( "Run the word2vec" )
+    print( "Run word2vec" )
     # Run the word2vec model
     texts_stemmed = list(tokens['error_msg'])
     # 1 for skip gram, 0 for bow
-    model = gensim.models.Word2Vec(texts_stemmed, size=embedding_size, window=5, min_count=5, workers=4, sg=algo)
-    path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/word2vec/'
-    model.save(path + 'model_' + name + '_' + str(embedding_size) + '.model')
+    model = gensim.models.Word2Vec(texts_stemmed, size=embedding_size, window=5, min_count=5, workers=4, sg=w2v_algo)
+    model.save(model_path)
     
     return model
     
@@ -107,17 +110,21 @@ def load_model(path):
     model = gensim.models.Word2Vec.load(path)
     return model
 
-def encode_tokens(tokens, model, embedding_dim, minimum_count = -1, max_words = -1, avg_vec=False, store = False):
+
+def encode_tokens(tokens, model, embedding_dim, name = 'test', minimum_count = -1, max_words = -1, 
+                  avg_vec=False, store = False, path=''):
 
     
-     # Reduce vocabulary
+    # Reduce vocabulary
     if minimum_count > 0 or max_words > 0:
         print( "Reduce the vocab" )
         reduced_vocab = reduce_vocab(tokens, minimum_count = minimum_count, max_words = max_words)
-        def clean_data(tokens, vocab):
-            words_cleaned = filter(lambda word: word in vocab, tokens)
+        #print reduced_vocab.head()
+        def clean_data(msg, vocab):
+            words_cleaned = filter(lambda word: word not in vocab, msg)
             return words_cleaned
         tokens['error_msg'] = tokens['error_msg'].apply(clean_data, args=[reduced_vocab])
+        #print tokens['error_msg'].head()
     
     vocab = get_vocab(tokens)
     
@@ -132,7 +139,7 @@ def encode_tokens(tokens, model, embedding_dim, minimum_count = -1, max_words = 
     
     def encode(msg):
         return [word2index[w] for w in msg]
-    tokens['error_msg'] = tokens['error_msg'].apply(encode)
+    tokens['msg_encoded'] = tokens['error_msg'].apply(encode)
     
     embedding_matrix = np.zeros((len(word2index)+1, embedding_dim))
     for word, i in word2index.iteritems():
@@ -141,9 +148,8 @@ def encode_tokens(tokens, model, embedding_dim, minimum_count = -1, max_words = 
 
     # Store
     if store == True:
-        path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/word2vec/'
-        np.save(path + 'embedding_matrix_' + name + '_' + str(embedding_size) + '.npy', embedding_matrix)
-        tokens.to_hdf(path + 'tokens_index_' + name + '_' + str(embedding_size) + '.h5', 'frame')
+        np.save(path + 'embedding_matrix_' + name + '.npy', embedding_matrix)
+        tokens.to_hdf(path + 'tokens_index_' + name + '.h5', 'frame', mode = 'w')
     
     return word2index, embedding_matrix
     

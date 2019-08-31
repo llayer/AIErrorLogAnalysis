@@ -73,18 +73,17 @@ def chunker(seq, size):
     return (seq[pos:pos + size] for pos in xrange(0, len(seq), size))
 
 
-def store_filtered_tokens(frame, name, vocab, chunks = 1):
-    
-    path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/prefilter/'
+def store_filtered_tokens(frame, path, name, vocab, chunks = 1):
+   
     
     vocab.to_hdf(path + 'vocab.h5', 'frame')
     
     if chunks <= 1:
         frame = tokenize(frame)
-        frame.to_hdf(path + name + '.h5', 'frame')
+        frame.to_hdf(path + name + '.h5', 'frame', mode = 'w')
 
     else:
         size_chunk = int(float(len(frame)) / chunks)
         for counter, chunk in enumerate(chunker(frame, size_chunk)):
             print 'Processing chunk ', counter, '/', chunks 
-            chunk.to_hdf(path + name + str(counter) + '.h5', 'frame')  
+            chunk.to_hdf(path + name + str(counter) + '.h5', 'frame', mode = 'w')  

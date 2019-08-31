@@ -6,7 +6,7 @@ from nltk.stem.porter import PorterStemmer
 from nltk.tokenize.treebank import TreebankWordTokenizer
 
 
-def load_data(unique_msg = True):
+def load_data(path, unique_msg = True):
     
     time_chunks =  [(20170101, 20171009),(20171011, 20180301),(20180301, 20180601),
                     (20180601, 20181101),(20181101, 20190207),(20190207, 20190801)]
@@ -15,7 +15,7 @@ def load_data(unique_msg = True):
     for time in time_chunks:
         print( time )
         t1, t2 = str(time[0]), str(time[1])
-        frame = pd.read_hdf( '/eos/user/l/llayer/AIErrorLogAnalysis/data/filtered_messages/messages_filtered_' + 
+        frame = pd.read_hdf( path + 'messages_filtered_' + 
                             t1 + '_' + t2 + '.h5' )
         dfs.append( frame )
         
@@ -40,19 +40,17 @@ def chunker(seq, size):
     return (seq[pos:pos + size] for pos in xrange(0, len(seq), size))
 
 
-def tokenize_chunks(frame, name, chunks = 1):
-
-    path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/tokenized_tmp/'
+def tokenize_chunks(frame, path, name, chunks = 1):
 
     if chunks <= 1:
         frame = tokenize(frame)
-        frame.to_hdf(path + name + '.h5', 'frame')
+        frame.to_hdf(path + name + '.h5', 'frame', mode = 'w')
 
     else:
         size_chunk = int(float(len(frame)) / chunks)
         for counter, chunk in enumerate(chunker(frame, size_chunk)):
             print 'Processing chunk ', counter, '/', chunks 
             chunk = tokenize(chunk)
-            chunk.to_hdf(path + name + str(counter) + '.h5', 'frame')
+            chunk.to_hdf(path + name + str(counter) + '.h5', 'frame', mode = 'w')
             
             
