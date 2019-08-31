@@ -13,6 +13,7 @@ def load_data(unique_msg = True):
     
     dfs = []
     for time in time_chunks:
+        print( time )
         t1, t2 = str(time[0]), str(time[1])
         frame = pd.read_hdf( '/eos/user/l/llayer/AIErrorLogAnalysis/data/filtered_messages/messages_filtered_' + 
                             t1 + '_' + t2 + '.h5' )

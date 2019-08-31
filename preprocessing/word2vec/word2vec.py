@@ -97,6 +97,29 @@ def run_word2vec(tokens, minimum_count = -1, max_words = -1, algo = 1, embedding
     texts_stemmed = list(tokens['error_msg'])
     # 1 for skip gram, 0 for bow
     model = gensim.models.Word2Vec(texts_stemmed, size=embedding_size, window=5, min_count=5, workers=4, sg=algo)
+    path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/word2vec/'
+    model.save(path + 'model_' + name + '_' + str(embedding_size) + '.model')
+    
+    return model
+    
+    
+def load_model(path):
+    model = gensim.models.Word2Vec.load(path)
+    return model
+
+def encode_tokens(tokens, model, embedding_dim, minimum_count = -1, max_words = -1, avg_vec=False, store = False):
+
+    
+     # Reduce vocabulary
+    if minimum_count > 0 or max_words > 0:
+        print( "Reduce the vocab" )
+        reduced_vocab = reduce_vocab(tokens, minimum_count = minimum_count, max_words = max_words)
+        def clean_data(tokens, vocab):
+            words_cleaned = filter(lambda word: word in vocab, tokens)
+            return words_cleaned
+        tokens['error_msg'] = tokens['error_msg'].apply(clean_data, args=[reduced_vocab])
+    
+    vocab = get_vocab(tokens)
     
     # Add the average vector
     if avg_vec == True:
@@ -104,26 +127,28 @@ def run_word2vec(tokens, minimum_count = -1, max_words = -1, algo = 1, embedding
     
     # Encode 
     print( "Encode the messages" )
-    word2index = {token: token_index for token_index, token in enumerate(model.wv.index2word)}
+    
+    word2index = {token: token_index for token_index, token in enumerate(list(vocab['word']))}
+    
     def encode(msg):
         return [word2index[w] for w in msg]
     tokens['error_msg'] = tokens['error_msg'].apply(encode)
     
+    embedding_matrix = np.zeros((len(word2index)+1, embedding_dim))
+    for word, i in word2index.iteritems():
+        embedding_vector = model.wv[word]
+        embedding_matrix[i] = model.wv[word]
+
     # Store
     if store == True:
         path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/word2vec/'
-        #model.save(path + "data/word2vec_extended.model")
-        # Save embedding matrix
-        embedding_matrix = np.zeros((len(word2index)+1, 50))
-        for word, i in word2index.items():
-            embedding_matrix[i] = model.wv[word]
         np.save(path + 'embedding_matrix_' + name + '_' + str(embedding_size) + '.npy', embedding_matrix)
-        # Save frame
         tokens.to_hdf(path + 'tokens_index_' + name + '_' + str(embedding_size) + '.h5', 'frame')
+    
+    return word2index, embedding_matrix
+    
+    
 
-    return word2index
-    
-    
 def tsne(frame):
     
     avg_vec = list(frame)
