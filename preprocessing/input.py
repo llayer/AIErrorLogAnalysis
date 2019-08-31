@@ -30,7 +30,7 @@ PATH_INPUT = '/eos/user/l/llayer/AIErrorLogAnalysis/data/input/'
 if do_tokenization == True:
     
     print( 'Start tokenization' )
-    from tokenization import tokens
+    import tokens
     data = tokens.load_data(PATH_MESSAGES)
     tokens.tokenize_chunks(data, PATH_TOKENS, 'tokens', 10)
 
@@ -38,7 +38,7 @@ if do_tokenization == True:
 if do_cleaning == True:
     
     print( 'Start cleaning' )
-    from clean import clean
+    import clean
     tokens = clean.load_tokens(PATH_TOKENS)
     tokens = pd.concat(tokens)
     vocab = clean.clean(tokens, 'error_msg', 10)
@@ -48,7 +48,7 @@ if do_cleaning == True:
 if do_selection == True:
     
     print( 'Start selection' )
-    from selection import message_selection
+    import message_selection
     tokens = message_selection.load_tokens(PATH_CLEANED_TOKENS)
     tokens = pd.concat(tokens)
     tokens = message_selection.select_message(tokens)
@@ -58,7 +58,7 @@ if do_selection == True:
 if do_embeddings == True:
     
     print( 'Start embeddings' )
-    from word2vec import word2vec
+    import word2vec
     tokens = word2vec.load_tokens(PATH_CLEANED_TOKENS)
     tokens = pd.concat(tokens)
     
@@ -78,7 +78,7 @@ if do_embeddings == True:
 if do_indexing == True:
     
     print( 'Start indexing' )
-    from word2vec import word2vec
+    import word2vec
     
     for exp in EXPERIMENTS:
         print( 'Indexing:', exp )
@@ -93,7 +93,7 @@ if do_indexing == True:
 if do_input == True:
     
     print( 'Start input generation' )
-    from input_generator import input_generator
+    import input_generator
     for exp in EXPERIMENTS:
         print( 'Input:', exp )    
         path_tokens = PATH_ENCODING + 'tokens_index_' + exp['NAME'] + '.h5'
