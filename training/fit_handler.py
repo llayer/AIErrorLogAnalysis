@@ -29,6 +29,32 @@ sess = tf.Session(config=config)
 set_session(sess)  # set this TensorFlow session as the default session for Keras
 """
 
+#path = '/nfshome/llayer/data/input_msg.h5'
+def load_data(path, msg_only = False, sample = False, sample_fact = 3):
+
+    actionshist = pd.read_hdf(path, 'frame')
+    
+    print( actionshist['label'].value_counts() )
+    
+    if sample == True:
+        minority_class = actionshist[actionshist['label'] == 1]
+        n_samples = int(sample_fact*len(minority_class))
+        majority_class_sampled = actionshist[actionshist['label'] == 0].sample(n_samples , random_state=42)
+        print('After sampling:', 'Minority class', len(minority_class), 'Majority class', len(majority_class_sampled) )
+        actionshist = pd.concat([minority_class, majority_class_sampled])
+    
+    if msg_only == False:
+        sites = pd.read_hdf(path, 'frame2')
+        codes = pd.read_hdf(path, 'frame3')
+    else:
+        codes = pd.read_hdf(path, 'frame4')
+        sites = pd.read_hdf(path, 'frame5')
+        codes.rename({'errors_msg': 'error'}, axis=1, inplace=True)
+        sites.rename({'sites_msg': 'site'}, axis=1, inplace=True)
+        
+    return actionshist, codes, sites
+
+
 class FitHandler(object):
     
 
@@ -101,12 +127,6 @@ class FitHandler(object):
                 if e.errno != errno.EEXIST:
                     raise        
     
-    
-    def print_summary_labels(self, X):
-        
-        print( X['label'].value_counts() )
-    
-    
     def print_model(self, model_param=None):
         
         model = self.get_model()
@@ -125,7 +145,7 @@ class FitHandler(object):
         generator = input_batch_generator.InputBatchGenerator(X, 'label', self.codes_index, self.sites_index,
                                                               self.embedding_dim, batch_size = batch_size, 
                                                               averaged=self.gen_param['averaged'], 
-                                                              first_only=self.gen_param['first_only'],
+                                                              sequence=self.gen_param['sequence'],
                                                               only_msg = self.gen_param['only_msg'], 
                                                               max_msg = self.gen_param['max_msg'])   
         return generator.msg_batch(start, stop)
@@ -202,14 +222,14 @@ class FitHandler(object):
         generator_train = input_batch_generator.InputBatchGenerator(X_train, 'label', self.codes_index, self.sites_index,
                                                                     self.embedding_dim, batch_size = batch_size_train, 
                                                                     averaged=self.gen_param['averaged'], 
-                                                                    first_only=self.gen_param['first_only'],
+                                                                    sequence=self.gen_param['sequence'],
                                                                     only_msg = self.gen_param['only_msg'], 
                                                                     max_msg = self.gen_param['max_msg'])
 
         generator_test = input_batch_generator.InputBatchGenerator(X_test, 'label', self.codes_index, self.sites_index,
                                                                    self.embedding_dim, batch_size = batch_size_val, 
                                                                    averaged = self.gen_param['averaged'], 
-                                                                   first_only= self.gen_param['first_only'],
+                                                                   sequence= self.gen_param['sequence'],
                                                                    only_msg = self.gen_param['only_msg'], 
                                                                    max_msg = self.gen_param['max_msg'] )
         

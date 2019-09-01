@@ -8,8 +8,8 @@ from keras.utils import to_categorical
 
 class InputBatchGenerator(object):
     
-    def __init__(self, frame, label, codes, sites, pad_dim, batch_size = 1, max_msg = 5, max_msg_per_error = 50, 
-                 max_msg_per_wf = 200, mode = 'default', averaged = False, first_only = False, only_msg = False):
+    def __init__(self, frame, label, codes, sites, pad_dim, batch_size = 1, max_msg = 5, 
+                 averaged = False, sequence = False, only_msg = False):
         
         self.frame = frame
         self.n_tasks = len(frame)
@@ -18,12 +18,12 @@ class InputBatchGenerator(object):
         self.codes = codes
         self.sites = sites
         self.pad_dim = pad_dim
-        self.max_msg = max_msg
-        self.max_msg_per_error = max_msg_per_error
-        self.max_msg_per_wf = max_msg_per_wf
-        self.mode = mode
+        if sequence == False:
+            self.max_msg = 1
+        else:
+            self.max_msg = max_msg
         self.averaged = averaged
-        self.first_only = first_only
+        self.sequence = sequence
         self.only_msg = only_msg
         self.unique_sites = len(list(set(self.sites.values())))
         self.unique_codes = len(list(set(self.codes.values())))
@@ -60,48 +60,22 @@ class InputBatchGenerator(object):
         self.error_site_counts[index, self.codes[error], self.sites[site], site_state_encoded] += count
     
     
-    def fill_first_message(self, index, error, site, error_message_sequence, i_key, used_codes, exit_code):
+    def fill_first_message(self, index, error, site, error_message):
         
-        # Loop over the error message sequence
-        for counter, error_message in enumerate(error_message_sequence):
-                                    
-            # Stop when maximal message is reached
-            if int(error) == exit_code[counter]:
-                                
-                # Pad the error message
-                if self.averaged == False:
-                    error_message = self.pad_along_axis(error_message)
+                               
+        # Pad the error message
+        if self.averaged == False:
+            error_message = self.pad_along_axis(error_message)
 
-                # Sequence per task, error, site
-                if self.mode == 'default':               
-                    #print( self.codes[error], error, self.sites[site], site, counter )
-                    self.error_site_tokens[index, self.codes[error], self.sites[site]] = error_message
+        self.error_site_tokens[index, self.codes[error], self.sites[site]] = error_message
 
-                # Sequence per task, error
-                elif self.mode == 'sum_sites':
-                    if codes_used[self.codes[error]] == self.max_msg_per_error:
-                        break
-                    self.error_site_tokens[index, self.codes[error], codes_used[self.codes[error]]] = error_message
-
-                # Sequence per task
-                elif self.mode == 'sum_sites_errors':
-                    if i_key == self.max_msg_per_wf:
-                        break
-                    self.error_site_tokens[index, i_key] = error_message
-
-                else:
-                    print( 'Error' )   
-
-                # Stop after first message equal to error code
-                break   
     
  
-    def fill_messages_sequence(self, index, error, site, error_message_sequence, i_key, used_codes):
+    def fill_messages_sequence(self, index, error, site, error_message_sequence):
         
         # Loop over the error message sequence
         for counter, error_message in enumerate(error_message_sequence):
-    
-            
+           
             # Stop when maximal message is reached
             if counter == self.max_msg:
                 break           
@@ -111,32 +85,12 @@ class InputBatchGenerator(object):
                 error_message = self.pad_along_axis(error_message)
             
             # Sequence per task, error, site
-            if self.mode == 'default':               
-                #print( self.codes[error], error, self.sites[site], site, counter )
-                self.error_site_tokens[index, self.codes[error], self.sites[site], counter ] = error_message
-            
-            # Sequence per task, error
-            elif self.mode == 'sum_sites':
-                if codes_used[self.codes[error]] == self.max_msg_per_error:
-                    break
-                self.error_site_tokens[index, self.codes[error], codes_used[self.codes[error]], counter] = error_message
-                
-            # Sequence per task
-            elif self.mode == 'sum_sites_errors':
-                if i_key == self.max_msg_per_wf:
-                    break
-                self.error_site_tokens[index, i_key, counter] = error_message
-
-            else:
-                print( 'Error' )       
+            self.error_site_tokens[index, self.codes[error], self.sites[site], counter ] = error_message    
             
     
     def to_dense(self, index_matrix, values):
 
-        errors, sites, counts, site_states, error_messages, exit_codes = values
-
-        # Store the used codes
-        codes_used = {}
+        errors, sites, counts, site_states, error_messages = values
         
         # Loop over the codes and sites
         for i_key in range(len(counts)):
@@ -155,22 +109,16 @@ class InputBatchGenerator(object):
                 continue
             
             error_message_sequence = error_messages[i_key]
-            exit_code = exit_codes[i_key]
             
             # Only continue if there exists a message
             if isinstance(error_message_sequence, (list,)):
                 
-                # Store the used codes
-                if self.codes[error] in codes_used:
-                    codes_used[ self.codes[error] ] += 1
-                else:
-                    codes_used[ self.codes[error] ] = 0
-                
                 # Fill the error message
-                if self.first_only == False:
-                    self.fill_messages_sequence( index_matrix, error, site, error_message_sequence, i_key, codes_used)
+                if self.sequence == True:
+                    self.fill_messages_sequence( index_matrix, error, site, error_message_sequence)
                 else:
-                    self.fill_first_message( index_matrix, error, site, error_message_sequence, i_key, codes_used, exit_code)
+                    self.fill_first_message( index_matrix, error, site, error_message_sequence)
+                    
 
                 
     def get_counts_matrix(self, sum_good_bad = False):
@@ -181,8 +129,7 @@ class InputBatchGenerator(object):
         batch = self.frame
         [self.to_dense(counter, values) for counter, values in enumerate(zip(self.frame['error'], self.frame['site'], 
                                                                              self.frame['count'], self.frame['site_state'],
-                                                                             self.frame['error_msg_tokenized'], 
-                                                                             self.frame['exit_codes']))]        
+                                                                             self.frame['msg_encoded'],))]        
         if sum_good_bad == True:
             return self.error_site_counts.sum(axis=3), self.frame[self.label].values
         else:
@@ -200,23 +147,10 @@ class InputBatchGenerator(object):
         # Error site matrix
         self.error_site_counts = np.zeros((chunk_size, self.unique_codes, self.unique_sites, 2))
         
-        if self.mode == 'default':
-            if self.first_only == False:
-                dim = (chunk_size, self.unique_codes, self.unique_sites, self.max_msg, self.pad_dim)
-            else:
-                dim = (chunk_size, self.unique_codes, self.unique_sites, self.pad_dim)
-        elif self.mode == 'sum_sites':
-            if self.first_only == False:
-                dim = (chunk_size, self.unique_codes, self.max_msg_per_error, self.max_msg, self.pad_dim)
-            else:
-                dim = (chunk_size, self.unique_codes, self.max_msg_per_error, self.pad_dim)           
-        elif self.mode == 'sum_sites_errors':
-            if self.first_only == False:
-                dim = (chunk_size, self.max_msg_per_wf, self.max_msg, self.pad_dim)
-            else:
-                dim = (chunk_size, self.max_msg_per_wf, self.pad_dim)
+        if self.sequence == True:
+            dim = (chunk_size, self.unique_codes, self.unique_sites, self.max_msg, self.pad_dim)
         else:
-            print( 'No valid configuration chosen' )        
+            dim = (chunk_size, self.unique_codes, self.unique_sites, self.pad_dim)    
         
         
         # Error message matrix
@@ -224,13 +158,12 @@ class InputBatchGenerator(object):
         
         # Tokens
         if self.averaged == False:
-            tokens_key = 'error_msg_tokenized'
+            tokens_key = 'msg_encoded'
         else:
             tokens_key = 'avg_w2v'
         
         [self.to_dense(counter, values) for counter, values in enumerate(zip(batch['error'], batch['site'], batch['count'],
-                                                                          batch['site_state'], batch[tokens_key], 
-                                                                          batch['exit_codes']))]
+                                                                          batch['site_state'], batch[tokens_key]))]
         
         if self.only_msg == False:
             return [self.error_site_tokens, self.error_site_counts]   
@@ -248,6 +181,7 @@ class InputBatchGenerator(object):
             else:
                 yield (self.msg_batch( cur_pos, self.n_tasks ), self.frame[self.label].iloc[cur_pos : self.n_tasks].values)   
                   
+                    
     def gen_inf_batches(self):
         
         while True:
@@ -257,6 +191,3 @@ class InputBatchGenerator(object):
             except StopIteration:
                 logging.warning("start over generator loop")
         
-        
-                
-                

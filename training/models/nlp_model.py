@@ -205,13 +205,11 @@ class NLP(BaseModel):
             # Merge the counts and words
             exit_code_site_repr = Concatenate(axis=3)([sent_encoder_reshaped, count_input])
         
-        else:
-            exit_code_encoder = sent_encoder_reshaped
         
         # Encode the site
         if self.encode_sites == True:
             
-            exit_code_site_repr = Reshape(( self.num_error , self.num_sites * encoder_units))(exit_code_site_repr)
+            exit_code_site_repr = Reshape(( self.num_error , self.num_sites * encoder_units))(sent_encoder_reshaped)
             exit_code_encoder = TimeDistributed(Dense(self.hp['units_site'], activation = self.hp['activation_site'], 
                       kernel_regularizer=self.hp['l2_regulizer']))(exit_code_site_repr)
 
