@@ -37,10 +37,11 @@ def evaluate( o , fold = None):
     
     # Experiment parameters
     e = exp.EXPERIMENTS[ i_exp ]
-    out_path = exp.OUTPATH + e['NAME']
+    out_path = exp.OUTPATH + e['NAME'] + '/'
     
+    """
     # Load the data
-    path = exp.PATH + 'input_' + e['NAME'] + '.h5'
+    path = exp.INPATH + 'input_' + e['NAME'] + '.h5'
     actionshist, codes, sites = fit_handler.load_data(path, msg_only=exp.MSG_ONLY,
                                                       sample=exp.SAMPLE, sample_fact = exp.SAMPLE_FACT)
     
@@ -58,6 +59,9 @@ def evaluate( o , fold = None):
 
     value = -1 * score
     print( value )
+    """
+    X = (o['learning_rate'], o['learning_rate']*2)
+    value = dummy_func( X , fold = fold)
     #dummy_func( X , fold = fold)
     res = {
         'result': value,
@@ -67,7 +71,8 @@ def evaluate( o , fold = None):
     print( res )
     if fold is not None:
         res['fold'] = fold
-    dest = '%s.json'%out_path+hash_value if fold is None else '%s_f%d.json'%(out_path+hash_value, fold)
+    out = out_path+hash_value
+    dest = '%s.json'%out if fold is None else '%s_f%d.json'%(out, fold)
     
     open(dest,'w').write(json.dumps(res))
 

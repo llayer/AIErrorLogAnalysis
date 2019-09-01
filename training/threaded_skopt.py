@@ -22,7 +22,8 @@ class externalfunc:
         com += ' --hash %s'%h
         if folds: com +=' --folds %s'%folds
         com += ' --i_exp %s'%self.i_exp
-        com += ' > %s.log'%out_path+h
+        out = self.out_path+h
+        com += ' > %s.log'%out
         #node = random.choice(['culture-plate-sm','imperium-sm','flere-imsaho-sm'])
         #com = 'ssh %s  '%node + com
         print( "Executing: ",com )
@@ -30,7 +31,7 @@ class externalfunc:
         c = os.system( com )
         ## get the output
         try:
-            r = json.loads(open('%s.json'%out_path+h).read())
+            r = json.loads(open('%s.json'%out).read())
             Y = r['result']
         except:
             print( "Failed on",com )
@@ -65,13 +66,14 @@ class manager:
         self.folds = folds
         self.wait = wait
         self.func = func
+        self.path = path
         
     def run(self):
         
         print( 'Start the manager' )
         
         ## first collect all possible existing results
-        for eh  in  glob.glob(path+'*.json'):
+        for eh  in  glob.glob(self.path+'*.json'):
             try:
                 ehf = json.loads(open(eh).read())
                 y = ehf['result']
@@ -187,12 +189,12 @@ def run_opt(i_exp):
     # Experiment parameters
     e = exp.EXPERIMENTS[ i_exp ]
     overwrite = True
-    path = exp.OUTPATH + e['NAME']
+    path = exp.OUTPATH + e['NAME'] + '/'
     create_dir(path, overwrite)
     
     
-    dim = NLP.get_skopt_dimensions()
-    #dim = e['SKOPT_DIM']
+    #dim = NLP.get_skopt_dimensions()
+    dim = exp.SKOPT_DIM
     print( dim )
     
     names = [var.name for var in dim]

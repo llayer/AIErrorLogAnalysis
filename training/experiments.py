@@ -1,9 +1,15 @@
 import keras
 from keras.layers import LSTM, GRU, CuDNNLSTM, CuDNNGRU
+from skopt.space import Real, Categorical, Integer
 
 #Path to the input files
 INPATH = '/nfshome/llayer/AIErrorLogAnalysis/data/'
 OUTPATH = '/nfshome/llayer/AIErrorLogAnalysis/experiments/'
+
+# Skopt dimensions
+SKOPT_DIM = [
+    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     )
+    ]
 
 # batch_size and epochs 
 BATCH_SIZE = 2
