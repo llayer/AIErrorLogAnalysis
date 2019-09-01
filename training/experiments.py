@@ -2,7 +2,8 @@ import keras
 from keras.layers import LSTM, GRU, CuDNNLSTM, CuDNNGRU
 
 #Path to the input files
-PATH = '/nfshome/llayer/AIErrorLogAnalysis/data/'
+INPATH = '/nfshome/llayer/AIErrorLogAnalysis/data/'
+OUTPATH = '/nfshome/llayer/AIErrorLogAnalysis/experiments/'
 
 # batch_size and epochs 
 BATCH_SIZE = 2
@@ -19,6 +20,7 @@ GEN_PARAM['averaged'] = False
 GEN_PARAM['only_msg'] = True
 GEN_PARAM['sequence'] = False
 GEN_PARAM['max_msg'] = 5
+GEN_PARAM['cut_front'] = True
 MSG_ONLY = True
 TRAIN_ON_BATCH = True
 

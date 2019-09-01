@@ -9,7 +9,7 @@ from keras.utils import to_categorical
 class InputBatchGenerator(object):
     
     def __init__(self, frame, label, codes, sites, pad_dim, batch_size = 1, max_msg = 5, 
-                 averaged = False, sequence = False, only_msg = False):
+                 averaged = False, sequence = False, only_msg = False, cut_front = True):
         
         self.frame = frame
         self.n_tasks = len(frame)
@@ -24,6 +24,7 @@ class InputBatchGenerator(object):
             self.max_msg = max_msg
         self.averaged = averaged
         self.sequence = sequence
+        self.cut_front = cut_front
         self.only_msg = only_msg
         self.unique_sites = len(list(set(self.sites.values())))
         self.unique_codes = len(list(set(self.codes.values())))
@@ -39,7 +40,10 @@ class InputBatchGenerator(object):
         axis_nb = len(array.shape)
 
         if pad_size < 0:
-            return array[0:self.pad_dim]
+            if self.cut_front == True:
+                return array[-self.pad_dim : ]
+            else:
+                return array[ : self.pad_dim ]
 
         npad = [(0, 0) for x in range(axis_nb)]
         npad[axis] = (0, pad_size)

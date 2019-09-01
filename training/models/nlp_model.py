@@ -22,11 +22,12 @@ print(K.floatx())
 class NLP(BaseModel):
     
     
-    def __init__(self, num_classes, num_error, num_sites, max_sequence_length, cudnn = False, batch_norm = False, 
+    def __init__(self, num_classes, num_error, num_sites, max_sequence_length, embedding_matrix_path,
+                 cudnn = False, batch_norm = False, 
                  train_embedding = False, word_encoder = 'LSTM', encode_sites = True, attention = False,
                  include_counts = False, verbose = 1):
         
-        embedding_matrix = np.load('/nfshome/llayer/data/embedding_matrix.npy')
+        embedding_matrix = np.load(embedding_matrix_path)
         self.embedding_matrix = embedding_matrix.astype('float32')
         self.max_sequence_length = max_sequence_length
         self.num_error = num_error

@@ -1,4 +1,5 @@
 import os
+import shutil
 from threading import Thread
 import hashlib
 import json
@@ -8,9 +9,11 @@ import glob
 
 class externalfunc:
     
-    def __init__(self , prog, names):
+    def __init__(self , prog, names, i_exp, out_path):
         self.call = prog
         self.N = names
+        self.i_exp = str(i_exp)
+        self.out_path = out_path
         
     def __call__(self, X, folds):
         self.args = dict(zip(self.N,X))
@@ -18,7 +21,8 @@ class externalfunc:
         com = '%s %s'% (self.call, ' '.join(['--%s %s'%(k,v) for (k,v) in self.args.items() ]))
         com += ' --hash %s'%h
         if folds: com +=' --folds %s'%folds
-        com += ' > %s.log'%h
+        com += ' --i_exp %s'%self.i_exp
+        com += ' > %s.log'%out_path+h
         #node = random.choice(['culture-plate-sm','imperium-sm','flere-imsaho-sm'])
         #com = 'ssh %s  '%node + com
         print( "Executing: ",com )
@@ -26,7 +30,7 @@ class externalfunc:
         c = os.system( com )
         ## get the output
         try:
-            r = json.loads(open('%s.json'%h).read())
+            r = json.loads(open('%s.json'%out_path+h).read())
             Y = r['result']
         except:
             print( "Failed on",com )
@@ -53,7 +57,7 @@ class worker(Thread):
 class manager:
     
     def __init__(self, n, skobj,
-                 iterations, func, wait=10, folds = 1):
+                 iterations, func, wait=10, folds = 1, path = ''):
        
         self.n = n ## number of parallel processes
         self.sk = skobj ## the skoptimizer you created
@@ -67,7 +71,7 @@ class manager:
         print( 'Start the manager' )
         
         ## first collect all possible existing results
-        for eh  in  glob.glob('*.json'):
+        for eh  in  glob.glob(path+'*.json'):
             try:
                 ehf = json.loads(open(eh).read())
                 y = ehf['result']
@@ -147,9 +151,27 @@ def dummy_func( X , fold = None):
     print( "fold",fold )
     Y = X[0]**2+X[1]**2 + random.random()*10
     return Y
-                
+
+
+def create_dir(path, overwrite):
+
+    if overwrite == True:
+        if os.path.exists(path):
+            shutil.rmtree(path)
+            os.makedirs(path)
+        else:
+            os.makedirs(path)
+        print( 'Create directory:', path )
+    else:
+        try:
+            os.makedirs(path)
+            print( 'Create directory:', path )
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise        
+
             
-def run_opt():
+def run_opt(i_exp):
     
     print( 'Start optimization' )
     
@@ -159,20 +181,32 @@ def run_opt():
     from skopt import gp_minimize
     from models.nlp_model import NLP
     import sys
+    import experiments as exp
 
+
+    # Experiment parameters
+    e = exp.EXPERIMENTS[ i_exp ]
+    overwrite = True
+    path = exp.OUTPATH + e['NAME']
+    create_dir(path, overwrite)
+    
+    
     dim = NLP.get_skopt_dimensions()
+    #dim = e['SKOPT_DIM']
     print( dim )
     
+    names = [var.name for var in dim]
+    
+    """
     names = []
     for var in dim:
         name = var.name
         print( name )
         names.append(name)
-        
+    """
     
     folds = 1
-    n_par = 2
-    externalize = externalfunc(prog='python3 run_train_ex.py', names=names)
+    externalize = externalfunc(prog='python3 train_threaded.py', names=names, i_exp = i_exp, out_path = path)
     
     run_for = 10
 
@@ -184,21 +218,6 @@ def run_opt():
         elif do=='external':
             use_func = externalize
 
-
-    #dim = [Real(-20, 20) for i in range(n_par)]
-    """
-    start = time.mktime(time.gmtime())
-    res = gp_minimize(
-        func=lambda X : use_func(X, folds),
-        dimensions=dim,
-        n_calls = run_for,
-        
-    )
-
-    print( "GPM best value",res.fun,"at",res.x )
-    #print res
-    print( "took",time.mktime(time.gmtime())-start,"[s]" )
-    """
     
     o = Optimizer(
         n_initial_points =5,
@@ -216,7 +235,8 @@ def run_opt():
                 iterations = run_for,
                 func = use_func,
                 wait= 10,
-                folds = folds
+                folds = folds,
+                path = path
     )
     start = time.mktime(time.gmtime())
     m.run()
@@ -229,7 +249,7 @@ def run_opt():
         
 if __name__ == "__main__":
     
-    run_opt()
+    run_opt(0)
         
         
 

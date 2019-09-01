@@ -29,6 +29,7 @@ sess = tf.Session(config=config)
 set_session(sess)  # set this TensorFlow session as the default session for Keras
 """
 
+
 #path = '/nfshome/llayer/data/input_msg.h5'
 def load_data(path, msg_only = False, sample = False, sample_fact = 3):
 
@@ -75,8 +76,8 @@ class FitHandler(object):
         self.dim_errors = len(list(set(self.codes_index.values())))
         mem = psutil.virtual_memory()
         
-        if self.store == True:
-            self.create_dir(overwrite)
+        #if self.store == True:
+        #    self.create_dir(overwrite)
         
         print( 'Memory:', mem[2] )
         print( 'Errors:', self.dim_errors, 'Sites:', self.dim_sites, 'Embedding dim:', self.embedding_dim )
@@ -147,7 +148,8 @@ class FitHandler(object):
                                                               averaged=self.gen_param['averaged'], 
                                                               sequence=self.gen_param['sequence'],
                                                               only_msg = self.gen_param['only_msg'], 
-                                                              max_msg = self.gen_param['max_msg'])   
+                                                              max_msg = self.gen_param['max_msg'],
+                                                              cut_front = self.gen_param['cut_front'])   
         return generator.msg_batch(start, stop)
     
     
@@ -224,14 +226,16 @@ class FitHandler(object):
                                                                     averaged=self.gen_param['averaged'], 
                                                                     sequence=self.gen_param['sequence'],
                                                                     only_msg = self.gen_param['only_msg'], 
-                                                                    max_msg = self.gen_param['max_msg'])
+                                                                    max_msg = self.gen_param['max_msg'],
+                                                                    cut_front = self.gen_param['cut_front'])   
 
         generator_test = input_batch_generator.InputBatchGenerator(X_test, 'label', self.codes_index, self.sites_index,
                                                                    self.embedding_dim, batch_size = batch_size_val, 
                                                                    averaged = self.gen_param['averaged'], 
                                                                    sequence= self.gen_param['sequence'],
                                                                    only_msg = self.gen_param['only_msg'], 
-                                                                   max_msg = self.gen_param['max_msg'] )
+                                                                   max_msg = self.gen_param['max_msg'],
+                                                                   cut_front = self.gen_param['cut_front'])   
         
         if self.gen_param['only_msg'] == True:
             multiinput = False
