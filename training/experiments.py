@@ -13,7 +13,7 @@ SKOPT_DIM = [
 
 # batch_size and epochs 
 BATCH_SIZE = 2
-MAX_EPOCHS = 10
+MAX_EPOCHS = 5
 
 # sample
 SAMPLE = True
@@ -38,7 +38,7 @@ EXPERIMENTS = [
     
     # 1st experiment 
     {'NAME': 'NOMINAL', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg',
-     'NLP_PARAM': { 'cudnn': False, 'batch_norm': False, 'train_embedding': False, 'word_encoder': 'LSTM', 
+     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'train_embedding': False, 'word_encoder': 'LSTM', 
                    'attention': False, 'encode_sites': True, 'include_counts': False},
      'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
                     'units_site': 10, 'dense_layers': 3, 'dense_units': 20, 'learning_rate':0.0001 } ,

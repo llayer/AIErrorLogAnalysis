@@ -39,15 +39,16 @@ def evaluate( o , fold = None):
     e = exp.EXPERIMENTS[ i_exp ]
     out_path = exp.OUTPATH + e['NAME'] + '/'
     
-    """
+    
     # Load the data
     path = exp.INPATH + 'input_' + e['NAME'] + '.h5'
-    actionshist, codes, sites = fit_handler.load_data(path, msg_only=exp.MSG_ONLY,
+    embedding_matrix_path = exp.INPATH + 'embedding_matrix_' + e['NAME'] + '.npy'
+    actionshist, codes, sites = fit_handler.load_data(path, msg_only=exp.MSG_ONLY, 
                                                       sample=exp.SAMPLE, sample_fact = exp.SAMPLE_FACT)
     
     # Setup the fit handler
-    handler = fit_handler.FitHandler( exp.MODEL, codes, sites, exp.MAX_WORDS, exp.GEN_PARAM, nlp_param = e['NLP_PARAM'],
-                                       train_on_batch = exp.TRAIN_ON_BATCH )
+    handler = fit_handler.FitHandler( exp.MODEL, codes, sites, exp.MAX_WORDS, embedding_matrix_path,
+                                     exp.GEN_PARAM, nlp_param = e['NLP_PARAM'], train_on_batch = exp.TRAIN_ON_BATCH )
     # Initial hyper parameters
     model_param = e['HYPERPARAM']
     # Overwrite with bayesian suggestion
@@ -59,9 +60,9 @@ def evaluate( o , fold = None):
 
     value = -1 * score
     print( value )
-    """
-    X = (o['learning_rate'], o['learning_rate']*2)
-    value = dummy_func( X , fold = fold)
+    
+    #X = (o['learning_rate'], o['learning_rate']*2)
+    #value = dummy_func( X , fold = fold)
     #dummy_func( X , fold = fold)
     res = {
         'result': value,

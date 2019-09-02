@@ -59,7 +59,8 @@ def load_data(path, msg_only = False, sample = False, sample_fact = 3):
 class FitHandler(object):
     
 
-    def __init__(self, model_type, codes, sites, embedding_dim, gen_param, pruning_mode = 'None', nlp_param = None,
+    def __init__(self, model_type, codes, sites, embedding_dim, embedding_matrix_path,
+                 gen_param, pruning_mode = 'None', nlp_param = None,
                  train_on_batch = True, use_smote = False, store = True, name = 'test', overwrite = True, verbose = 1):
         
         self.model_type = model_type
@@ -69,6 +70,7 @@ class FitHandler(object):
         self.use_smote = use_smote
         self.store = store
         self.path = '/nfshome/llayer/AIErrorLogAnalysis/results/' + name 
+        self.embedding_matrix_path = embedding_matrix_path
         self.verbose = verbose
         self.nlp_param = nlp_param
         self.sites_index, self.codes_index = self.prune( codes, sites, pruning_mode )
@@ -100,6 +102,7 @@ class FitHandler(object):
         if self.model_type == 'nlp_msg':
             if self.nlp_param is not None:
                 return nlp_model.NLP(2, self.dim_errors, self.dim_sites, self.embedding_dim, 
+                                     embedding_matrix_path = self.embedding_matrix_path,
                                      cudnn = self.nlp_param['cudnn'],
                                      batch_norm = self.nlp_param['batch_norm'], 
                                      train_embedding = self.nlp_param['train_embedding'], 
