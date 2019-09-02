@@ -3,6 +3,7 @@ from collections import Counter
 from os import listdir
 import itertools
 
+
 def load_tokens(path):
     
     files = [f for f in listdir(path)]

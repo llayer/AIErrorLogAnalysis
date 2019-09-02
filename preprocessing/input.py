@@ -6,6 +6,7 @@ do_cleaning = False
 do_selection = False
 do_embeddings = False
 do_indexing = False
+print_quantiles = False
 do_input = True
 
 
@@ -88,6 +89,18 @@ if do_indexing == True:
         name = exp['NAME']
         word2vec.encode_tokens(tokens, model, exp['DIM'], max_words = exp['VOCAB'], 
                                name = name, avg_vec = True, store=True, path=PATH_ENCODING)
+        
+
+if print_quantiles == True:
+
+    for exp in EXPERIMENTS:
+        print( 'Tokens:', exp )    
+        path_tokens = PATH_ENCODING + 'tokens_index_' + exp['NAME'] + '.h5'
+        tokens = pd.head_hdf(path_tokens)
+        message_lenth = tokens['msg_encoded'].str.len()
+        print( 'Quantile 90%', message_lenth.quantile(.90) )
+        print( 'Quantile 95%', message_lenth.quantile(.95) )
+        print( 'Quantile 99%', message_lenth.quantile(.99) )
         
             
 if do_input == True:

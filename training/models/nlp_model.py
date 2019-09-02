@@ -190,11 +190,13 @@ class NLP(BaseModel):
             sent_encoder = TimeDistributed(self.word_encoder_conv())(sent_input_reshaped)
         else: 
             print( 'No valid encoder' )    
-            
+        
+        """    
         sent_encoder = Dropout(self.hp['dropout'])(sent_encoder)
         if self.batch_norm == True:
             sent_encoder = BatchNormalization()(sent_encoder)
-            
+        """
+        
         # Reshape the error sites matrix
     
         sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, encoder_units))(sent_encoder)
@@ -214,9 +216,11 @@ class NLP(BaseModel):
             exit_code_encoder = TimeDistributed(Dense(self.hp['units_site'], activation = self.hp['activation_site'], 
                       kernel_regularizer=self.hp['l2_regulizer']))(exit_code_site_repr)
 
+            """
             exit_code_encoder = Dropout(self.hp['dropout'])(exit_code_encoder)
             if self.batch_norm == True:
                 exit_code_encoder = BatchNormalization()(exit_code_encoder)
+            """
             
         # Flatten
         flattened = Flatten()(exit_code_encoder)

@@ -110,7 +110,7 @@ class AttentionWithContext(Layer):
             a *= K.cast(mask, K.floatx())
 
         # in some cases especially in the early stages of training the sum may be almost zero
-        # and this results in NaN's. A workaround is to add a very small positive number ε to the sum.
+        # and this results in NaN's. A workaround is to add a very small positive number epsilon to the sum.
         # a /= K.cast(K.sum(a, axis=1, keepdims=True), K.floatx())
         a /= K.cast(K.sum(a, axis=1, keepdims=True) + K.epsilon(), K.floatx())
 
