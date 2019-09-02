@@ -53,4 +53,26 @@ def tokenize_chunks(frame, path, name, chunks = 1):
             chunk = tokenize(chunk)
             chunk.to_hdf(path + name + str(counter) + '.h5', 'frame', mode = 'w')
             
-            
+def load_sequence():
+        
+    path = '/eos/user/l/llayer/AIErrorLogAnalysis/data/filtered_messages/'
+    
+    time_chunks =  [(20170101, 20171009),(20171011, 20180301),(20180301, 20180601),
+                    (20180601, 20181101),(20181101, 20190207),(20190207, 20190801)]
+    
+    frames = []
+    for time in time_chunks:
+        print( time )
+        t1, t2 = str(time[0]), str(time[1])
+        frame = pd.read_hdf( path + 'messages_filtered_' + t1 + '_' + t2 + '.h5' )
+        frames.append( frame )
+    frames = pd.concat(frames, ignore_index=True)
+
+    frames = frames.drop_duplicates(subset=['task_name', 'error', 'site', 'exit_codes', 'error_type', 'steps_counter', 'names'])
+    frames['error_type'] = frames['error_type'].apply(lambda x : 'Unknown' if len(x) > 50 else x )
+
+    frames = frames.groupby(['task_name', 'error', 'site'], as_index=False)['exit_codes', 'error_msg', 'error_type',
+                                                                          'steps_counter', 'names'].agg(lambda x: list(x))
+    
+    return frames
+                                    
