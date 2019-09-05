@@ -1,13 +1,16 @@
 import pandas as pd
 import numpy as np
-
+import os
+import sys
+   
 do_tokenization = False
 do_cleaning = False
 do_selection = False
 do_embeddings = False
 do_indexing = False
 print_quantiles = False
-do_input = True
+do_input = False
+do_test = True
 
 
 # Defines the input experiments for the machine learning
@@ -113,7 +116,36 @@ if do_input == True:
         input_generator.create_input(PATH_ACTIONSHIST, path_tokens, name = exp['NAME'], store_path = PATH_INPUT)
     
     
+if do_test == True:
     
+    # Load the modules
     
+    module_path = os.path.abspath(os.path.join('../training/data_loader'))
+    if module_path not in sys.path:
+        sys.path.append(module_path)   
+    module_path = os.path.abspath(os.path.join('../utils'))
+    if module_path not in sys.path:
+        sys.path.append(module_path)
+    print sys.path
+    from test_generator import *
+    from create_actionshist_keys import *
+    from actionshist_utils import *
+    
+    # Run the test
+    print( 'Start test' )
+    for exp in EXPERIMENTS:
+        print( 'Input:', exp )    
+        # Load the actionshist
+        path_tokens = PATH_ENCODING + 'tokens_index_' + exp['NAME'] + '.h5'
+        path_input = PATH_INPUT + 'input_' + exp['NAME'] + '.h5'    
+        input_ml = pd.read_hdf(path_input, 'frame')
+        sites = pd.read_hdf(path_input, 'frame2')
+        codes = pd.read_hdf(path_input, 'frame3')
+        
+        actionshist = load_data(PATH_ACTIONSHIST)
+        test(input_ml, actionshist, codes, sites, path_tokens, count_test = True, matrix_setup_test = True, batch_test_msg=True)
+        
+     
+        
     
     
