@@ -4,11 +4,24 @@ from skopt.space import Real, Categorical, Integer
 
 #Path to the input files
 INPATH = '/nfshome/llayer/AIErrorLogAnalysis/data/'
+# Test the fast I/O
+#INPATH = '/imdata/error_log_analysis/data/'
 OUTPATH = '/nfshome/llayer/AIErrorLogAnalysis/experiments/'
+
+# Include counts
+MSG_ONLY = False
+PRUNING = 'Neg'
 
 # Skopt dimensions
 SKOPT_DIM = [
-    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     )
+    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
+    Real(        low=0.01, high=0.5,                       name='dropout'     ),
+    Real(        low=1e-3, high=0.9,  prior="log-uniform", name='l2_regulizer'   ),
+    Integer(     low=2, high=100,                          name='rnn_units'   ),
+    Integer(     low=10, high = 100,                       name = 'units_site'    ),
+    Integer(     low=1,    high=5,                         name='dense_layers'      ),
+    Integer(     low=10,    high=100,                         name='dense_units'      ),
+    Integer(     low=0,    high=1,                         name='train_embedding'      ),
     ]
 
 # batch_size and epochs 
@@ -16,18 +29,17 @@ BATCH_SIZE = 2
 MAX_EPOCHS = 5
 
 # sample
-SAMPLE = True
+SAMPLE = False
 SAMPLE_FACT = 5
 
 # batch generator param
 MAX_WORDS = 400
 GEN_PARAM = {}
 GEN_PARAM['averaged'] = False
-GEN_PARAM['only_msg'] = True
+GEN_PARAM['only_msg'] = MSG_ONLY 
 GEN_PARAM['sequence'] = False
-GEN_PARAM['max_msg'] = 5
+GEN_PARAM['max_msg'] = 1
 GEN_PARAM['cut_front'] = True
-MSG_ONLY = True
 TRAIN_ON_BATCH = True
 
 # Model
@@ -36,15 +48,18 @@ MODEL = 'nlp_msg'
 # Defines the input experiments for the machine learning
 EXPERIMENTS = [
     
-    # 1st experiment 
+    # 1st experiment initial parameter
     {'NAME': 'NOMINAL', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg',
-     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'train_embedding': False, 'word_encoder': 'LSTM', 
-                   'attention': False, 'encode_sites': True, 'include_counts': False},
+     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM', 
+                   'attention': False, 'encode_sites': True, 'include_counts': True},
      'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
-                    'units_site': 10, 'dense_layers': 3, 'dense_units': 20, 'learning_rate':0.0001 } ,
+                    'l2_regulizer': 0.0001, 'units_site': 10, 'dense_layers': 3, 
+                    'train_embedding': False, 'dense_units': 20, 'learning_rate':0.0001 } ,
+     'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
      
     } ,
     
+    """
     # 2nd experiment - train the embeddings
     {'NAME': 'TRAIN_EMBEDDINGS', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg' ,
      'NLP_PARAM': { 'cudnn': False, 'batch_norm': False, 'train_embedding': True, 'word_encoder': 'LSTM', 
@@ -64,7 +79,7 @@ EXPERIMENTS = [
     } ,
      
     # 4th experiment - Conv1D instead of GRU
-    """
+    
     {'NAME': 'CONV_1D', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg'
      'NLP_PARAM': { 'cudnn': False, 'batch_norm': False, 'train_embedding': False, 'word_encoder': 'LSTM', 
                    'attention': False, 'encode_sites': True, 'include_counts': False},
@@ -73,4 +88,6 @@ EXPERIMENTS = [
      
     } ,
     """
+    
+    # Decay test: decay = lr / total number of epochs
 ]

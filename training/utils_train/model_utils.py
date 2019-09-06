@@ -30,7 +30,7 @@ def memory_kill(verbose = 0):
 class FitControl(keras.callbacks.Callback):
 
     def __init__(self, train_gen = None, val_gen = None, patience = 3, mode='max', multiinput = True, early_stopping = True, 
-                 store_best = False, store_best_roc = False, verbose = 0):
+                 store_best = False, store_best_roc = False, kill_slowstarts = False, kill_threshold = 0.51, verbose = 0):
 
         super().__init__()
         self.validation_gen = val_gen 
@@ -43,6 +43,8 @@ class FitControl(keras.callbacks.Callback):
         self.tpr_best = None
         self.multiinput = multiinput
         self.early_stopping = early_stopping
+        self.kill_slowstarts = kill_slowstarts
+        self.kill_threshold = kill_threshold
         self.best_score = -np.inf if mode == 'max' else np.inf
         self.wait = 0
         self.is_better = np.greater if mode == 'max' else np.less
@@ -119,6 +121,9 @@ class FitControl(keras.callbacks.Callback):
             self.wait += 1
         if self.wait > self.patience and self.early_stopping == True:
             self.model.stop_training = True
+        if self.kill_slowstarts == True and score < self.kill_threshold:
+            self.model.stop_training = True
+                
 
            
             

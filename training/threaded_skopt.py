@@ -188,7 +188,7 @@ def run_opt(i_exp):
 
     # Experiment parameters
     e = exp.EXPERIMENTS[ i_exp ]
-    overwrite = True
+    overwrite = False
     path = exp.OUTPATH + e['NAME'] + '/'
     create_dir(path, overwrite)
     

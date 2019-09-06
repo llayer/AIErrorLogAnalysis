@@ -129,7 +129,7 @@ class InputBatchGenerator(object):
         
         self.only_counts = True
         
-        self.error_site_counts = np.zeros((self.n_tasks, self.unique_codes, self.unique_sites, 2), dtype=np.float32)
+        self.error_site_counts = np.zeros((self.n_tasks, self.unique_codes, self.unique_sites, 2), dtype=np.int32)
         batch = self.frame
         [self.to_dense(counter, values) for counter, values in enumerate(zip(self.frame['error'], self.frame['site'], 
                                                                              self.frame['count'], self.frame['site_state'],
@@ -149,7 +149,7 @@ class InputBatchGenerator(object):
         chunk_size = len(batch)
         
         # Error site matrix
-        self.error_site_counts = np.zeros((chunk_size, self.unique_codes, self.unique_sites, 2))
+        self.error_site_counts = np.zeros((chunk_size, self.unique_codes, self.unique_sites, 2), dtype=np.int32)
         
         if self.sequence == True:
             dim = (chunk_size, self.unique_codes, self.unique_sites, self.max_msg, self.pad_dim)
@@ -158,7 +158,7 @@ class InputBatchGenerator(object):
         
         
         # Error message matrix
-        self.error_site_tokens = np.zeros(dim)
+        self.error_site_tokens = np.zeros(dim, dtype=np.int32)
         
         # Tokens
         if self.averaged == False:
