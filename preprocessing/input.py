@@ -118,8 +118,17 @@ if do_input == True:
     
 if do_test == True:
     
-    # Load the modules
+    # Test cases:
+    count_test = False
+    batch_test_msg = False
+    matrix_setup_test = True
+    index_test = True
+    # Args
+    n_matrices = 10
+    embedding_dim = 400
+    cut_front = True
     
+    # Load the modules
     module_path = os.path.abspath(os.path.join('../training/data_loader'))
     if module_path not in sys.path:
         sys.path.append(module_path)   
@@ -146,9 +155,10 @@ if do_test == True:
         codes = pd.read_hdf(path_input, 'frame3')
         
         actionshist = load_data(PATH_ACTIONSHIST)
-        test(input_ml, actionshist, codes, sites, path_tokens, count_test = False, matrix_setup_test = False,
-             batch_test_msg=True, index_test = False,
-             model_path = path_model, word2index_path = path_word2index, embedding_matrix_path = path_embedding_matrix)
+        test(input_ml, actionshist, codes, sites, path_tokens, count_test = count_test, matrix_setup_test = matrix_setup_test,
+             batch_test_msg=batch_test_msg, index_test = index_test, n_matrices = n_matrices, model_path = path_model, 
+             word2index_path = path_word2index, embedding_matrix_path = path_embedding_matrix, 
+             embedding_dim = embedding_dim, cut_front = cut_front)
         
      
         
