@@ -173,7 +173,7 @@ def tsne(frame):
     return x,y
 
 
-def plot_tsne_error(df, key, n_samples, title = 't-sne'):
+def plot_tsne(df, key, n_samples, title = 't-sne', save_path = None):
     
     sample = df.sample(n_samples)
     
@@ -186,7 +186,7 @@ def plot_tsne_error(df, key, n_samples, title = 't-sne'):
     
     colors = cm.rainbow(np.linspace(0, 1, len(error_codes_unique)))    
     
-    x, y = tsne(sample['avg_w2v'])
+    x, y = tsne(sample['avg'])
     
     plt.figure(figsize=(10, 10)) 
     
@@ -207,21 +207,31 @@ def plot_tsne_error(df, key, n_samples, title = 't-sne'):
     plt.legend(loc='upper right')   
     plt.title(title)
         
-    plt.show()
+    if save_path is None:
+        plt.show()
+    else:
+        plt.savefig(save_path + '_tsne.png')
 
+        
+def plot_msg_length(frame, log=False, bins=100, set_range=None, save_path = None):
+    
+    # Length of the sequences
+    len_lists = frame['msg_encoded'].str.len()
+    if set_range is not None:
+        ax = len_lists.hist(bins = bins, range=set_range)
+    else:
+        ax = len_lists.hist(bins = bins)
+    if log == True:
+        ax.set_yscale('log')
 
-def plot_tsne_wf(frame, n_samples, title = 't-sne'):
-    
-    
-    sample = frame.sample(n_samples)
+    plt.xlabel('N words')
         
-    x, y = tsne(sample['avg_w2v'])
+    if save_path is None:
+        plt.show()
+    else:
+        plt.savefig(save_path + '_message_lenth.png')
     
-    plt.figure(figsize=(10, 10)) 
-    plt.scatter(x,y)
-    plt.title(title)
-        
-    plt.show()    
+    
     
 #def plot_word_cloud():
     

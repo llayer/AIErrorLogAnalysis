@@ -8,9 +8,10 @@ do_cleaning = False
 do_selection = False
 do_embeddings = False
 do_indexing = False
+do_plots = True
 print_quantiles = False
 do_input = False
-do_test = True
+do_test = False
 
 
 # Defines the input experiments for the machine learning
@@ -94,6 +95,24 @@ if do_indexing == True:
                                name = name, avg_vec = True, store=True, path=PATH_ENCODING)
         
 
+if do_plots == True:
+    
+    print( 'Plotting' )
+    import matplotlib
+    matplotlib.use('Agg')
+    import word2vec
+    for exp in EXPERIMENTS:
+        print( 'Tokens:', exp )    
+        path_tokens = PATH_ENCODING + 'tokens_index_' + exp['NAME'] + '.h5'
+        path_plots = PATH_ENCODING + 'plots/' + exp['NAME']
+        tokens = pd.read_hdf(path_tokens) 
+        # Message length
+        word2vec.plot_msg_length(tokens, log=True, save_path = path_plots)
+        # tsne
+        word2vec.plot_tsne(tokens, 'exit_code', 5000, save_path = path_plots)
+        
+    
+        
 if print_quantiles == True:
 
     for exp in EXPERIMENTS:
