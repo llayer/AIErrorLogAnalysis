@@ -137,13 +137,18 @@ if do_test == True:
         print( 'Input:', exp )    
         # Load the actionshist
         path_tokens = PATH_ENCODING + 'tokens_index_' + exp['NAME'] + '.h5'
+        path_model = PATH_MODELS + 'model_' + exp['ALGO'] + '_' + str(exp['DIM']) + '.model'
+        path_word2index = PATH_ENCODING + 'word2index_' + exp['NAME'] + '.json'
+        path_embedding_matrix = PATH_ENCODING + 'embedding_matrix_' + exp['NAME'] + '.npy'
         path_input = PATH_INPUT + 'input_' + exp['NAME'] + '.h5'    
         input_ml = pd.read_hdf(path_input, 'frame')
         sites = pd.read_hdf(path_input, 'frame2')
         codes = pd.read_hdf(path_input, 'frame3')
         
         actionshist = load_data(PATH_ACTIONSHIST)
-        test(input_ml, actionshist, codes, sites, path_tokens, count_test = True, matrix_setup_test = True, batch_test_msg=True)
+        test(input_ml, actionshist, codes, sites, path_tokens, count_test = False, matrix_setup_test = False,
+             batch_test_msg=True, index_test = False,
+             model_path = path_model, word2index_path = path_word2index, embedding_matrix_path = path_embedding_matrix)
         
      
         

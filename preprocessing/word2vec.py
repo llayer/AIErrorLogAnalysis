@@ -9,6 +9,7 @@ from os import listdir
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from sklearn.manifold import TSNE  
+import json
     
 
 def load_tokens(path):
@@ -135,7 +136,7 @@ def encode_tokens(tokens, model, embedding_dim, name = 'test', minimum_count = -
     # Encode 
     print( "Encode the messages" )
     
-    word2index = {token: token_index for token_index, token in enumerate(list(vocab['word']))}
+    word2index = {token: token_index + 1 for token_index, token in enumerate(list(vocab['word']))}
     
     def encode(msg):
         return [word2index[w] for w in msg]
@@ -150,6 +151,8 @@ def encode_tokens(tokens, model, embedding_dim, name = 'test', minimum_count = -
     if store == True:
         np.save(path + 'embedding_matrix_' + name + '.npy', embedding_matrix)
         tokens.to_hdf(path + 'tokens_index_' + name + '.h5', 'frame', mode = 'w')
+        with open(path + 'word2index_' + name + '.json', 'w') as fp:
+            json.dump(word2index, fp)
     
     return word2index, embedding_matrix
     
