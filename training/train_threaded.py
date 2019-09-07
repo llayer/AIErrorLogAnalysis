@@ -31,6 +31,7 @@ def evaluate( o , fold = None):
     hash_value = o.pop('hash')
     i_exp = int(o.pop('i_exp'))
     
+    
     # Memory before the training
     mem = psutil.virtual_memory()
     print( 'Memory:', mem[2] )
@@ -42,19 +43,22 @@ def evaluate( o , fold = None):
     
     # Load the data
     path = exp.INPATH + 'input_' + e['NAME'] + '.h5'
-    embedding_matrix_path = exp.INPATH + 'embedding_matrix_' + e['NAME'] + '.npy'
-    actionshist, codes, sites = fit_handler.load_data(path, msg_only=exp.MSG_ONLY, 
+    e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + e['NAME'] + '.npy'
+    actionshist, codes, sites = fit_handler.load_data(path, msg_only=exp.MSG_ONLY,
                                                       sample=exp.SAMPLE, sample_fact = exp.SAMPLE_FACT)
     
     # Setup the fit handler
-    handler = fit_handler.FitHandler( exp.MODEL, codes, sites, exp.MAX_WORDS, embedding_matrix_path,
-                                     exp.GEN_PARAM, nlp_param = e['NLP_PARAM'], train_on_batch = exp.TRAIN_ON_BATCH )
+    handler = fit_handler.FitHandler( exp.MODEL, codes, sites, exp.MAX_WORDS, 
+                                     exp.GEN_PARAM, pruning_mode = exp.PRUNING,
+                                     model_args = e['NLP_PARAM'], callback_args = e['CALLBACK'],
+                                     train_on_batch = exp.TRAIN_ON_BATCH )
+    
     # Initial hyper parameters
     model_param = e['HYPERPARAM']
     # Overwrite with bayesian suggestion
     for name, value in o.items():
         model_param[name] = value
-    
+
     score = handler.run_training(actionshist, batch_size = exp.BATCH_SIZE, max_epochs = exp.MAX_EPOCHS, 
                                      model_param = model_param)
 
@@ -143,6 +147,6 @@ if __name__ == "__main__":
     else:
         
         #opt = {'learning_rate': 0.0006903190575459679, 'hash':111}
-        #print( opt )
+        print( opt )
         evaluate( opt )
                                                                                         
