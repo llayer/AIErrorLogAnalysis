@@ -8,9 +8,10 @@ do_cleaning = False
 do_selection = False
 do_embeddings = False
 do_indexing = False
+do_plots = True
 print_quantiles = False
 do_input = False
-do_test = True
+do_test = False
 
 
 # Defines the input experiments for the machine learning
@@ -94,6 +95,24 @@ if do_indexing == True:
                                name = name, avg_vec = True, store=True, path=PATH_ENCODING)
         
 
+if do_plots == True:
+    
+    print( 'Plotting' )
+    import matplotlib
+    matplotlib.use('Agg')
+    import word2vec
+    for exp in EXPERIMENTS:
+        print( 'Tokens:', exp )    
+        path_tokens = PATH_ENCODING + 'tokens_index_' + exp['NAME'] + '.h5'
+        path_plots = PATH_ENCODING + 'plots/' + exp['NAME']
+        tokens = pd.read_hdf(path_tokens) 
+        # Message length
+        word2vec.plot_msg_length(tokens, log=True, save_path = path_plots)
+        # tsne
+        word2vec.plot_tsne(tokens, 'exit_code', 5000, save_path = path_plots)
+        
+    
+        
 if print_quantiles == True:
 
     for exp in EXPERIMENTS:
@@ -118,8 +137,17 @@ if do_input == True:
     
 if do_test == True:
     
-    # Load the modules
+    # Test cases:
+    count_test = False
+    batch_test_msg = False
+    matrix_setup_test = True
+    index_test = True
+    # Args
+    n_matrices = 10
+    embedding_dim = 400
+    cut_front = True
     
+    # Load the modules
     module_path = os.path.abspath(os.path.join('../training/data_loader'))
     if module_path not in sys.path:
         sys.path.append(module_path)   
@@ -137,13 +165,19 @@ if do_test == True:
         print( 'Input:', exp )    
         # Load the actionshist
         path_tokens = PATH_ENCODING + 'tokens_index_' + exp['NAME'] + '.h5'
+        path_model = PATH_MODELS + 'model_' + exp['ALGO'] + '_' + str(exp['DIM']) + '.model'
+        path_word2index = PATH_ENCODING + 'word2index_' + exp['NAME'] + '.json'
+        path_embedding_matrix = PATH_ENCODING + 'embedding_matrix_' + exp['NAME'] + '.npy'
         path_input = PATH_INPUT + 'input_' + exp['NAME'] + '.h5'    
         input_ml = pd.read_hdf(path_input, 'frame')
         sites = pd.read_hdf(path_input, 'frame2')
         codes = pd.read_hdf(path_input, 'frame3')
         
         actionshist = load_data(PATH_ACTIONSHIST)
-        test(input_ml, actionshist, codes, sites, path_tokens, count_test = True, matrix_setup_test = True, batch_test_msg=True)
+        test(input_ml, actionshist, codes, sites, path_tokens, count_test = count_test, matrix_setup_test = matrix_setup_test,
+             batch_test_msg=batch_test_msg, index_test = index_test, n_matrices = n_matrices, model_path = path_model, 
+             word2index_path = path_word2index, embedding_matrix_path = path_embedding_matrix, 
+             embedding_dim = embedding_dim, cut_front = cut_front)
         
      
         
