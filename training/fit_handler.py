@@ -59,17 +59,16 @@ def load_data(path, msg_only = False, sample = False, sample_fact = 3):
 class FitHandler(object):
     
 
-    def __init__(self, model_type, codes, sites, embedding_dim, 
-                 gen_param, pruning_mode = 'None', model_args = None, callback_args = None,
-                 train_on_batch = True, use_smote = False, store = True, name = 'test', overwrite = True, verbose = 1):
+    def __init__(self, model_type, codes, sites, embedding_dim = 400, 
+                 gen_param = None, pruning_mode = 'None', model_args = None, callback_args = None,
+                 train_on_batch = True, use_smote = False, path = '', verbose = 1):
         
         self.model_type = model_type
         self.embedding_dim = embedding_dim
         self.train_on_batch = train_on_batch
         self.gen_param = gen_param
         self.use_smote = use_smote
-        self.store = store
-        self.path = '/nfshome/llayer/AIErrorLogAnalysis/results/' + name 
+        self.path = path
         self.verbose = verbose
         self.model_args = model_args
         self.callback_args = callback_args
@@ -78,14 +77,12 @@ class FitHandler(object):
         self.dim_errors = len(list(set(self.codes_index.values())))
         mem = psutil.virtual_memory()
         
-        #if self.store == True:
-        #    self.create_dir(overwrite)
-        
         print( 'Memory:', mem[2] )
         print( 'Errors:', self.dim_errors, 'Sites:', self.dim_sites, 'Embedding dim:', self.embedding_dim )
         print( 'Pruning:', pruning_mode )
         print( 'Model:', self.model_type )
         print( self.gen_param )
+        print( 'Output path:', self.path )
 
         
     def get_model(self):
@@ -111,24 +108,7 @@ class FitHandler(object):
                                      attention = self.model_args['attention'] ) 
             else:
                 return nlp_model.NLP(2, self.dim_errors, self.dim_sites, self.embedding_dim ) 
-        
-        
-    def create_dir(self, overwrite):
-        
-        if overwrite == True:
-            if os.path.exists(self.path):
-                shutil.rmtree(self.path)
-                os.makedirs(self.path)
-            else:
-                os.makedirs(self.path)
-            print( 'Create directory:', self.path )
-        else:
-            try:
-                os.makedirs(self.path)
-                print( 'Create directory:', self.path )
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise        
+                
     
     def print_model(self, model_param=None):
         
@@ -192,8 +172,9 @@ class FitHandler(object):
         else:
             X_train, X_test, y_train, y_test = self.split(X, y, test_size = test_size)              
             score = self.train( X_train, y_train, X_test, y_test, max_epochs = max_epochs, batch_size = batch_size, 
-                       model_param = model_param, early_stopping = True)            
+                       model_param = model_param)            
         return score
+    
     
     def split(self, X, y=None, test_size=0.33):
         
@@ -209,8 +190,7 @@ class FitHandler(object):
         return generator.get_counts_matrix()
     
         
-    def train_in_batches(self, X_train, X_test, batch_size_train, model_param = None, batch_size_val = 10, max_epochs = 20,
-                         early_stopping = True):
+    def train_in_batches(self, X_train, X_test, batch_size_train, model_param = None, batch_size_val = 10, max_epochs = 20):
             
         
         class_weights = class_weight.compute_class_weight('balanced', np.unique( X_train['label']), X_train['label'])
@@ -264,8 +244,7 @@ class FitHandler(object):
         
         
 
-    def train(self, X_train, y_train, X_test, y_test, model_param = None, batch_size = 100, 
-              max_epochs = 200, early_stopping = True):
+    def train(self, X_train, y_train, X_test, y_test, model_param = None, batch_size = 100, max_epochs = 200):
         
         if self.use_smote == True:
             X_train, y_train = self.smote(X_train, y_train)
@@ -278,13 +257,18 @@ class FitHandler(object):
         model.create_model()
                      
         
-        control_callback = model_utils.FitControl(mode = 'max', multiinput = False, verbose=self.verbose)
+        control_callback = model_utils.FitControl(mode = 'max', multiinput = False, verbose=self.verbose,
+                                                  early_stopping = self.callback_args['es'], 
+                                                  patience = self.callback_args['patience'],
+                                                  kill_slowstarts = self.callback_args['kill_slowstarts'], 
+                                                  kill_threshold = self.callback_args['kill_threshold'])
         
         model.model.fit( X_train, y_train, validation_data = (X_test, y_test), 
                                            epochs = max_epochs, batch_size = batch_size, callbacks = [control_callback],
                                            class_weight = class_weights, verbose = self.verbose)            
         
         score = control_callback.best_score
+        print( 'Final score', score )
         
         del model
         K.clear_session() 
@@ -292,30 +276,26 @@ class FitHandler(object):
         return score
     
     
-    def kfold_val(self, X, y=None, model_param = None, kfold_splits = 5, kfold_function=KFold, 
-                  max_epochs=20, batch_size=100, seed=42, verbose=0, early_stopping=True):
+    def kfold_val(self, X, y=None, model_param = None, kfold_splits = 5, max_epochs=20, batch_size=100, seed=42):
 
         mem = psutil.virtual_memory()
         print( 'Memory:', mem[2] )
         
         cvscores = []    
         
-        enum = enumerate(kfold_function(n_splits=kfold_splits, shuffle=True, random_state=seed).split(X,y))
+        enum = enumerate(KFold(n_splits=kfold_splits, shuffle=True, random_state=seed).split(X,y))
         for i,(index_train, index_valid) in enum:
             
-            if self.train_on_batch == False:
+            if y is not None:
                 X_train, X_test = X[ index_train ], X[ index_valid ]
                 y_train, y_test = y[ index_train ], y[ index_valid ]
 
-                
                 score = self.train( X_train, y_train, X_test, y_test, max_epochs = max_epochs, model_param = model_param,
-                                                         batch_size = batch_size, early_stopping = True)
-                
+                                                         batch_size = batch_size)
             else:
-                
                 X_train, X_test = X[ index_train ], X[ index_valid ]
                 score = self.train_in_batches( X_train, X_test, max_epochs = max_epochs, model_param = model_param,
-                                                         batch_size_train = batch_size, early_stopping = True)
+                                                         batch_size_train = batch_size)
             
             cvscores.append(score)
             
@@ -323,15 +303,21 @@ class FitHandler(object):
 
   
 
-    def find_optimal_parameters( self, X, y=None, cv=False, kfold_splits=3, test_size = 0.33, num_calls=12,
-                                 max_epochs=100, batch_size=2, seed=42, verbose=1): 
+    def find_optimal_parameters( self, dimensions, initial_param, 
+                                 X, y=None, cv=False, kfold_splits=3, test_size = 0.33, num_calls=12,
+                                 max_epochs=100, batch_size=2, seed=42): 
+        
+        import setGPU
 
         mem = psutil.virtual_memory()
         print( 'Memory:', mem[2] )
 
+        if self.train_on_batch == False:
+            initial_param['batch_size'] = batch_size 
+        
         # Initialize the skopt params
-        model = self.get_model()
-        dimensions = model.get_skopt_dimensions()
+        #model = self.get_model()
+        #dimensions = model.get_skopt_dimensions()
         
         prior_values = []
         prior_names = []
@@ -339,15 +325,11 @@ class FitHandler(object):
             name = var.name
             print( name )
             prior_names.append(name)
-            prior_values.append(model.hp[name])
+            prior_values.append(initial_param[name])
         
         
-        if self.train_on_batch == False:
-            prior_values.append( batch_size )
-            prior_names.append( 'batch_size' )
-        
-        del model
-        K.clear_session() 
+        #del model
+        #K.clear_session() 
                                 
         global num_skopt_call
         num_skopt_call = 0
@@ -358,7 +340,7 @@ class FitHandler(object):
 
             global num_skopt_call
 
-            if verbose != 0: print('\n \t ::: {} SKOPT CALL ::: \n'.format(num_skopt_call+1))
+            print('\n \t ::: {} SKOPT CALL ::: \n'.format(num_skopt_call+1))
             print(p)
             
             
@@ -366,12 +348,10 @@ class FitHandler(object):
                 if self.train_on_batch == False:
                     batch_size_optimize = p.pop('batch_size', None)
                     cvscores = self.kfold_val(X, y, model_param = p, kfold_splits=kfold_splits, 
-                                              max_epochs = max_epochs, batch_size = batch_size_optimize,
-                                              early_stopping = True)
+                                              max_epochs = max_epochs, batch_size = batch_size_optimize)
                 else:
                     cvscores = self.kfold_val(X, model_param = p, kfold_splits=kfold_splits, 
-                                              max_epochs = max_epochs, batch_size = batch_size,
-                                              early_stopping = True)
+                                              max_epochs = max_epochs, batch_size = batch_size)
                     
                 result = -1 * np.mean( cvscores )
                 std_dv = np.std( cvscores )
@@ -383,12 +363,11 @@ class FitHandler(object):
                     batch_size_optimize = p.pop('batch_size', None)
                     X_train, X_test, y_train, y_test = self.split(X, y, test_size = test_size) 
                     score = self.train(  X_train, y_train, X_test, y_test, model_param = p, max_epochs = max_epochs, 
-                                                batch_size = batch_size_optimize, early_stopping = True)
+                                                batch_size = batch_size_optimize)
                 else:
                     #batch_size = batch_size
                     X_train, X_test = self.split(X, test_size = test_size)              
-                    score = self.train_in_batches( X_train, X_test, batch_size, model_param = p, max_epochs = max_epochs, 
-                                                   early_stopping = True)               
+                    score = self.train_in_batches( X_train, X_test, batch_size, model_param = p, max_epochs = max_epochs)               
                     
                 result = -1 * score
                 print( result )
@@ -412,7 +391,7 @@ class FitHandler(object):
         return result
     
     
-    def store_results(self, search_result, prior_names, cv_results = None, store = True):
+    def store_results(self, search_result, prior_names, cv_results = None):
 
         params = pd.DataFrame(search_result['x_iters'])
         params.columns = [*prior_names]
@@ -428,8 +407,7 @@ class FitHandler(object):
             cv_frame = cv_frame.drop(['score'], axis=1)
             result = pd.merge(result, cv_frame, on=['call'])
 
-        if self.store == True:
-            result.to_hdf(self.path + '/' + 'skopt.h5', 'frame')
+        result.to_hdf(self.path + 'skopt.h5', 'frame')
 
         return result 
     

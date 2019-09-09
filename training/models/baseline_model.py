@@ -29,15 +29,32 @@ class FF(BaseModel):
             'dropout_value' : 0.015
             
         }"""
-        self.model_params = {
+        self.hp = {
             'learning_rate':0.005675,
             'dense_units':35,
             'dense_layers' : 6,
             'regulizer_value' : 0.001000,
             'dropout_value' : 0.052315
         }
+        
+        
+    def set_hyperparameters(self, tweaked_instances):
 
-    def create_model( self, learning_rate, dense_units, dense_layers, regulizer_value, dropout_value ): 
+        for  key, value in tweaked_instances.items():
+            if key in self.hp:
+                self.hp[key] = value
+            else:
+                raise KeyError(key + ' does not exist in hyperparameters')
+
+            
+    def print_hyperparameters(self):
+
+        print('Hyperparameter\tCorresponding Value')
+        for key, value in self.hp.items():
+            print(key, '\t\t', value)
+            
+            
+    def create_model( self ): 
 
         m_input = Input((self.num_error,self.num_sites, 2))
         #m_input = Input((self.num_error,self.num_sites))
@@ -45,11 +62,11 @@ class FF(BaseModel):
         m = m_input
 
         m = Flatten()(m)
-        for _ in range(dense_layers):
-            m = Dense( units=dense_units, activation='relu', 
+        for _ in range(self.hp['dense_layers']):
+            m = Dense( units=self.hp['dense_units'], activation='relu', 
                        kernel_initializer='lecun_normal',
-                       kernel_regularizer=keras.regularizers.l2(regulizer_value) )(m)
-            m = Dropout(dropout_value)(m)
+                       kernel_regularizer=keras.regularizers.l2(self.hp['regulizer_value']) )(m)
+            m = Dropout(self.hp['dropout_value'])(m)
 
         #m_output = Dense( units=self.num_classes, activation='softmax', 
         #                  kernel_initializer='lecun_normal',
@@ -57,14 +74,14 @@ class FF(BaseModel):
 
         m_output = Dense( units=1, activation='sigmoid', 
                           kernel_initializer='lecun_normal',
-                          kernel_regularizer=keras.regularizers.l2(regulizer_value) )(m)
+                          kernel_regularizer=keras.regularizers.l2(self.hp['regulizer_value']) )(m)
         
         self.model = keras.models.Model(inputs=m_input, outputs=m_output)
         self.model.compile( loss = 'binary_crossentropy', #'categorical_crossentropy',
-                            optimizer = keras.optimizers.Adam(lr=learning_rate), metrics = ['accuracy'])
+                            optimizer = keras.optimizers.Adam(lr=self.hp['learning_rate']), metrics = ['accuracy'])
         
 
-
+    @staticmethod
     def get_skopt_dimensions(self):
 
         dimensions = [

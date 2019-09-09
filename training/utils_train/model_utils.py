@@ -76,7 +76,6 @@ class FitControl(keras.callbacks.Callback):
                 y_pred = (np.asarray(self.model.predict([self.validation_data[0], self.validation_data[1]])))
                 y_targ = self.validation_data[2]
             else:
-                                
                 y_pred = (np.asarray(self.model.predict(self.validation_data[0])))
                 y_targ = self.validation_data[1]
                 

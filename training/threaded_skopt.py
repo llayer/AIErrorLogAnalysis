@@ -165,12 +165,13 @@ def create_dir(path, overwrite):
             os.makedirs(path)
         print( 'Create directory:', path )
     else:
-        try:
+        if os.path.exists(path):    
+            print( 'Directory already exists! If you want to remove it do:' )
+            print( 'rm -r', path ) 
+        else:
             os.makedirs(path)
             print( 'Create directory:', path )
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise        
+
 
             
 def run_opt(i_exp):
