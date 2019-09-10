@@ -18,14 +18,13 @@ from skopt.space import Real, Categorical, Integer
 K.set_floatx('float32')
 print(K.floatx())
 
-    
-    
+
 class NLP(BaseModel):
     
     
     def __init__(self, num_classes, num_error, num_sites, max_sequence_length, embedding_matrix_path,
                  cudnn = False, batch_norm = False, word_encoder = 'LSTM', encode_sites = True, attention = False,
-                 include_counts = False, verbose = 1):
+                 include_counts = False, avg_w2v = False, verbose = 1):
         
         embedding_matrix = np.load(embedding_matrix_path)
         self.embedding_matrix = embedding_matrix.astype('float32')
@@ -40,6 +39,7 @@ class NLP(BaseModel):
         self.encode_sites = encode_sites
         self.batch_norm = batch_norm
         self.include_counts = include_counts
+        self.avg_w2v = avg_w2v
         self.verbose = verbose
         # Hyperparameters
         self.hp = {
@@ -60,6 +60,7 @@ class NLP(BaseModel):
             'rnncud': CuDNNLSTM, # TRY CuDNNGRU
             'rnn_units' : 10,
             # Site encoding
+            'encode_sites': False,
             'activation_site': 'relu', #TRY linear
             'units_site': 10,
             # Final layers
@@ -107,7 +108,7 @@ class NLP(BaseModel):
         
         #TODO add recurrent_dropout
         
-        word_input = Input(shape = ( self.max_sequence_length, ), dtype='float32')
+        word_input = Input(shape = ( None, ), dtype='int32')
         word_sequences = self.get_embedding_layer()(word_input)
                 
         if self.attention == False:
@@ -180,31 +181,45 @@ class NLP(BaseModel):
         if self.verbose == 1:
             self.print_hyperparameters()
         
+        
         # Input layers
-        sent_input = Input(shape = (self.num_error, self.num_sites, self.max_sequence_length), dtype='int32')
+        #sent_input = Input(shape = (self.num_error, self.num_sites, None), dtype='int32')
         
         # Reshape the matrix
-        sent_input_reshaped = Reshape(( self.num_error * self.num_sites, self.max_sequence_length))(sent_input)
-        
-        # Encode the words of the sentences
-        if self.word_encoder == 'LSTM':
-            encoder_units = int(self.hp['rnn_units'])
-            sent_encoder = TimeDistributed(self.word_encoder_lstm())(sent_input_reshaped)
-        elif self.word_encoder == 'Conv1D':
-            encoder_units = self.hp['units_conv']
-            sent_encoder = TimeDistributed(self.word_encoder_conv())(sent_input_reshaped)
-        else: 
-            print( 'No valid encoder' )    
-        
-        """    
-        sent_encoder = Dropout(self.hp['dropout'])(sent_encoder)
-        if self.batch_norm == True:
-            sent_encoder = BatchNormalization()(sent_encoder)
-        """
-        
-        # Reshape the error sites matrix
-    
-        sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, encoder_units))(sent_encoder)
+        #sent_input_reshaped = Reshape(( self.num_error * self.num_sites, ))(sent_input)
+       
+        if self.avg_w2v == False:
+            
+            sent_input = Input(shape = (self.num_error * self.num_sites, None), dtype='int32')
+            
+            # Encode the words of the sentences
+            if self.word_encoder == 'LSTM':
+                encoder_units = int(self.hp['rnn_units'])
+                sent_encoder = TimeDistributed(self.word_encoder_lstm())(sent_input)
+            elif self.word_encoder == 'Conv1D':
+                encoder_units = self.hp['units_conv']
+                sent_encoder = TimeDistributed(self.word_encoder_conv())(sent_input_reshaped)
+            else: 
+                print( 'No valid encoder' )    
+
+
+            """    
+            sent_encoder = Dropout(self.hp['dropout'])(sent_encoder)
+            if self.batch_norm == True:
+                sent_encoder = BatchNormalization()(sent_encoder)
+            """
+
+            # Reshape the error sites matrix
+
+            sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, encoder_units))(sent_encoder)
+         
+        else:
+            
+            sent_input = Input(shape = (self.num_error * self.num_sites, self.max_sequence_length), dtype='float32')
+            sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, self.max_sequence_length))(sent_input)
+            sent_encoder_reshaped = TimeDistributed(Dense(int(self.hp['units_site']), activation = self.hp['activation_site'], 
+                      kernel_regularizer=l2(self.hp['l2_regulizer'])))(sent_encoder_reshaped)
+            encoder_units = int(self.hp['units_site'])
         
         # Add the meta information
         if self.include_counts == True:
@@ -222,7 +237,7 @@ class NLP(BaseModel):
         
         
         # Encode the site
-        if self.encode_sites == True:
+        if int(self.hp['encode_sites']) == True:
             
             exit_code_encoder = TimeDistributed(Dense(int(self.hp['units_site']), activation = self.hp['activation_site'], 
                       kernel_regularizer=l2(self.hp['l2_regulizer'])))(exit_code_site_repr)

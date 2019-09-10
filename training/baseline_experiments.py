@@ -20,7 +20,7 @@ SKOPT_DIM = [
     Real(        low=1e-4, high=1e-1, prior='log-uniform', name='learning_rate'     ),
     Integer(     low=10,    high=100,                        name='dense_units'     ),
     Integer(     low=2,    high=8,                        name='dense_layers'       ),
-    Real(        low=1e-3, high=0.9,  prior="log-uniform", name='regulizer_value'   ),
+    Real(        low=1e-5, high=0.9,  prior="log-uniform", name='regulizer_value'   ),
     Real(        low=0.01, high=0.5,                       name='dropout_value'     ),
     Integer(     low=500,   high = 5000,                    name='batch_size'       )
 ]

@@ -42,8 +42,9 @@ def evaluate( o , fold = None):
     
     
     # Load the data
-    path = exp.INPATH + 'input_' + e['NAME'] + '.h5'
-    e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + e['NAME'] + '.npy'
+    name = 'NOMINAL'
+    path = exp.INPATH + 'input_' + name + '.h5'
+    e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + name + '.npy'
     actionshist, codes, sites = fit_handler.load_data(path, msg_only=exp.MSG_ONLY,
                                                       sample=exp.SAMPLE, sample_fact = exp.SAMPLE_FACT)
     

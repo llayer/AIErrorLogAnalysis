@@ -17,25 +17,27 @@ SKOPT_DIM = [
     Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
     Real(        low=0.01, high=0.5,                       name='dropout'     ),
     Real(        low=1e-3, high=0.9,  prior="log-uniform", name='l2_regulizer'   ),
-    Integer(     low=2, high=100,                          name='rnn_units'   ),
-    Integer(     low=10, high = 100,                       name = 'units_site'    ),
+    #Integer(     low=2, high=100,                          name='rnn_units'   ),
+    Integer(     low=2, high = 20,                       name = 'units_site'    ),
     Integer(     low=1,    high=5,                         name='dense_layers'      ),
     Integer(     low=10,    high=100,                         name='dense_units'      ),
-    Integer(     low=0,    high=1,                         name='train_embedding'      ),
+    #Integer(     low=0,    high=1,                         name='encode_sites'      ),
+    #Integer(     low=0,    high=1,                         name='train_embedding'      ),
     ]
 
 # batch_size and epochs 
-BATCH_SIZE = 2
-MAX_EPOCHS = 5
+BATCH_SIZE = 100
+MAX_EPOCHS = 50
 
 # sample
 SAMPLE = False
 SAMPLE_FACT = 5
 
 # batch generator param
-MAX_WORDS = 400
+AVG_W2V = True
+MAX_WORDS = 50
 GEN_PARAM = {}
-GEN_PARAM['averaged'] = False
+GEN_PARAM['averaged'] = AVG_W2V
 GEN_PARAM['only_msg'] = MSG_ONLY 
 GEN_PARAM['sequence'] = False
 GEN_PARAM['max_msg'] = 1
@@ -51,11 +53,22 @@ EXPERIMENTS = [
     # 1st experiment initial parameter
     {'NAME': 'NOMINAL', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg',
      'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM', 
-                   'attention': False, 'encode_sites': True, 'include_counts': True},
+                   'attention': False, 'include_counts': True, 'avg_w2v': AVG_W2V},
      'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
-                    'l2_regulizer': 0.0001, 'units_site': 10, 'dense_layers': 3, 
-                    'train_embedding': False, 'dense_units': 20, 'learning_rate':0.0001 } ,
+                    'l2_regulizer': 0.0001, 'encode_sites': True, 'units_site': 10, 'dense_layers': 3, 
+                    'train_embedding': True, 'dense_units': 100, 'learning_rate':0.0001 } ,
      'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
+     
+    } ,
+    
+    # 2nd experiment averaged
+    {'NAME': 'AVG', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg',
+     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM', 
+                   'attention': False, 'include_counts': True, 'avg_w2v': AVG_W2V},
+     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
+                    'l2_regulizer': 0.0001, 'encode_sites': False, 'units_site': 10, 'dense_layers': 3, 
+                    'train_embedding': True, 'dense_units': 20, 'learning_rate':0.0001 } ,
+     'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.5001 }
      
     } ,
     

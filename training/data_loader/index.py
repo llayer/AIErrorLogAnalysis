@@ -12,12 +12,12 @@ def tiers_to_index(sites):
     tiers_to_index = {'T0' : 0, 'T1' : 1, 'T2' : 2, 'T3' : 3}
     sites_tiers = {}
     for site in sites:
-        tier = site[0:2].decode('utf8')
+        tier = site[0:2]#.decode('utf8')
         if tier in tiers_to_index:
             sites_tiers[site] = tiers_to_index[tier]
         else:
             sites_tiers[site] = 4
-
+    print( sites_tiers )
     return sites_tiers
 
 

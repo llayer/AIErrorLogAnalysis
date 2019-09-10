@@ -103,8 +103,8 @@ class FitHandler(object):
                                      cudnn = self.model_args['cudnn'],
                                      batch_norm = self.model_args['batch_norm'], 
                                      word_encoder = self.model_args['word_encoder'], 
-                                     encode_sites = self.model_args['encode_sites'],
                                      include_counts = self.model_args['include_counts'], 
+                                     avg_w2v = self.model_args['avg_w2v'],
                                      attention = self.model_args['attention'] ) 
             else:
                 return nlp_model.NLP(2, self.dim_errors, self.dim_sites, self.embedding_dim ) 
@@ -224,7 +224,7 @@ class FitHandler(object):
         else:
             multiinput = True
         
-        control_callback = model_utils.FitControl(train_gen = generator_train, val_gen = generator_test, 
+        control_callback = model_utils.FitControl(train_gen = None, val_gen = generator_test, 
                                                   mode = 'max', multiinput = multiinput, verbose=self.verbose,
                                                   early_stopping = self.callback_args['es'], 
                                                   patience = self.callback_args['patience'],

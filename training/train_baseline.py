@@ -48,7 +48,7 @@ def train( i_exp = 0, mode = 'train' ):
     
     # Setup the fit handler
     handler = fit_handler.FitHandler( exp.MODEL, codes, sites, pruning_mode = e['PRUNE'],
-                                      callback_args = e['CALLBACK'], train_on_batch = False, path = outpath)
+                                      callback_args = e['CALLBACK'], train_on_batch = False, path = outpath, verbose=2)
     
     # Get the count matrix
     X,y = handler.count_matrix(actionshist)
@@ -75,4 +75,4 @@ def train( i_exp = 0, mode = 'train' ):
 if __name__ == "__main__":
     
     print( "Start training" )
-    train(mode = 'optimize')
+    train(i_exp = 1, mode = 'train')

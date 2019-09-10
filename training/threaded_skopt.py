@@ -211,7 +211,7 @@ def run_opt(i_exp):
     folds = 1
     externalize = externalfunc(prog='python3 train_threaded.py', names=names, i_exp = i_exp, out_path = path)
     
-    run_for = 10
+    run_for = 30
 
     use_func = externalize
     if len(sys.argv)>1:
@@ -252,7 +252,7 @@ def run_opt(i_exp):
         
 if __name__ == "__main__":
     
-    run_opt(0)
+    run_opt(1)
         
         
 

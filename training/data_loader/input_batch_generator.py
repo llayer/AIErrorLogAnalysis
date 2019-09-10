@@ -48,7 +48,7 @@ class InputBatchGenerator(object):
         npad = [(0, 0) for x in range(axis_nb)]
         npad[axis] = (0, pad_size)
 
-        b = np.pad(array, pad_width=npad, mode='constant', constant_values=0)
+        b = np.pad(array, pad_width=npad, mode='constant', constant_values=int(0))
 
         return b
     
@@ -70,7 +70,7 @@ class InputBatchGenerator(object):
         # Pad the error message
         if self.averaged == False:
             error_message = self.pad_along_axis(error_message)
-
+        #print( error_message )
         self.error_site_tokens[index, self.codes[error], self.sites[site]] = error_message
 
     
@@ -87,13 +87,14 @@ class InputBatchGenerator(object):
             # Pad the error message
             if self.averaged == False:
                 error_message = self.pad_along_axis(error_message)
+                
             
             # Sequence per task, error, site
             self.error_site_tokens[index, self.codes[error], self.sites[site], counter ] = error_message    
             
     
     def to_dense(self, index_matrix, values):
-
+        
         errors, sites, counts, site_states, error_messages = values
         
         # Loop over the codes and sites
@@ -148,6 +149,27 @@ class InputBatchGenerator(object):
         batch = self.frame.iloc[start_pos : end_pos]
         chunk_size = len(batch)
         
+        # Tokens
+        if self.averaged == False:
+            tokens_key = 'msg_encoded'
+            self.pad_dim = 1
+            msg_t = []
+            for key in batch[tokens_key]:
+                for msg in key:
+                    if isinstance(msg, (list,)):
+                        if len(msg) > self.pad_dim:
+                            msg_t = msg
+                            self.pad_dim = len(msg)
+                        
+            if self.pad_dim > 200:
+                self.pad_dim = 200
+        else:
+            tokens_key = 'avg'
+       
+        
+        #print( self.pad_dim )
+        #print( msg )
+        
         # Error site matrix
         self.error_site_counts = np.zeros((chunk_size, self.unique_codes, self.unique_sites, 2), dtype=np.int32)
         
@@ -160,17 +182,12 @@ class InputBatchGenerator(object):
         # Error message matrix
         self.error_site_tokens = np.zeros(dim, dtype=np.int32)
         
-        # Tokens
-        if self.averaged == False:
-            tokens_key = 'msg_encoded'
-        else:
-            tokens_key = 'avg_w2v'
-        
         [self.to_dense(counter, values) for counter, values in enumerate(zip(batch['error'], batch['site'], batch['count'],
                                                                           batch['site_state'], batch[tokens_key]))]
         
         if self.only_msg == False:
-            return [self.error_site_tokens, self.error_site_counts]   
+            #self.error_site_tokens = np.reshape(
+            return [self.error_site_tokens.reshape((chunk_size, self.unique_codes * self.unique_sites, self.pad_dim)) , self.error_site_counts]   
         else:
             return self.error_site_tokens
     
