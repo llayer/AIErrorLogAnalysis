@@ -41,7 +41,7 @@ def train( i_exp = 0, model_param = None ):
 if __name__ == "__main__":
     
     print( "Start training" )
-    train(i_exp = 1)
+    train(i_exp = 0)
 
 
 

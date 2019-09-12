@@ -62,8 +62,8 @@ class FF(BaseModel):
         m = m_input
 
         m = Flatten()(m)
-        for _ in range(self.hp['dense_layers']):
-            m = Dense( units=self.hp['dense_units'], activation='relu', 
+        for _ in range(int(self.hp['dense_layers'])):
+            m = Dense( units=int(self.hp['dense_units']), activation='relu', 
                        kernel_initializer='lecun_normal',
                        kernel_regularizer=keras.regularizers.l2(self.hp['regulizer_value']) )(m)
             m = Dropout(self.hp['dropout_value'])(m)

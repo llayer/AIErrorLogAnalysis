@@ -252,7 +252,7 @@ def run_opt(i_exp):
         
 if __name__ == "__main__":
     
-    run_opt(1)
+    run_opt(0)
         
         
 

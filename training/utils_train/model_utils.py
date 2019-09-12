@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import keras
 from keras.callbacks import EarlyStopping
 from keras import backend as K
@@ -30,7 +31,8 @@ def memory_kill(verbose = 0):
 class FitControl(keras.callbacks.Callback):
 
     def __init__(self, train_gen = None, val_gen = None, patience = 3, mode='max', multiinput = True, early_stopping = True, 
-                 store_best = False, store_best_roc = False, kill_slowstarts = False, kill_threshold = 0.51, verbose = 0):
+                 store_best = False, store_best_roc = False, path = '', kill_slowstarts = False, 
+                 kill_threshold = 0.51, verbose = 0):
 
         super().__init__()
         self.validation_gen = val_gen 
@@ -39,6 +41,7 @@ class FitControl(keras.callbacks.Callback):
         self.verbose = verbose
         self.store_best = store_best
         self.store_best_roc = store_best_roc
+        self.path = path
         self.fpr_best = None
         self.tpr_best = None
         self.multiinput = multiinput
@@ -113,7 +116,7 @@ class FitControl(keras.callbacks.Callback):
             if self.store_best == True:
                 self.model.save(filepath = 'model.h5', overwrite=True)
             if self.store_best_roc == True:
-                fpr, tpr, _ = roc_curve(y_test, y_pred)
+                fpr, tpr, _ = roc_curve(y_targ, y_pred)
                 self.fpr_best = fpr
                 self.tpr_best = tpr
         else:
@@ -123,8 +126,20 @@ class FitControl(keras.callbacks.Callback):
         if self.kill_slowstarts == True and score < self.kill_threshold:
             self.model.stop_training = True
                 
+                
+    def on_train_end(self, logs={}):
+        
+        if self.store_best_roc is True:
+            
+            path = self.path + 'history.h5'
+            
+            metric = pd.DataFrame(self.scores, columns = ['ROC'])
+            best_roc_fpr = pd.DataFrame(self.fpr_best, columns = ['fpr'])
+            best_roc_tpr = pd.DataFrame(self.tpr_best, columns = ['tpr'])
 
-           
+            metric.to_hdf( path, key = 'ROC', mode = 'w' )
+            best_roc_fpr.to_hdf( path, key = 'fpr', mode = 'a' )
+            best_roc_tpr.to_hdf( path, key = 'tpr', mode = 'a' )
             
             
             

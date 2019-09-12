@@ -1,6 +1,7 @@
 import os
 import shutil
 import setGPU
+import pandas as pd
 import psutil
 import fit_handler
 import warnings
@@ -28,7 +29,7 @@ def create_dir(path, overwrite):
             print( 'Create directory:', path )
 
 
-def train( i_exp = 0, mode = 'train' ):
+def train( i_exp = 0, mode = 'train', model_param = None, batch_size = None ):
     
     # Memory before the training
     mem = psutil.virtual_memory()
@@ -56,15 +57,20 @@ def train( i_exp = 0, mode = 'train' ):
     mem = psutil.virtual_memory()
     print( 'Memory:', mem[2] )
     
+    if model_param is None:
+        model_param = e['HYPERPARAM']
+    if batch_size is None:
+        batch_size = exp.BATCH_SIZE
+    
     if mode == 'optimize':
-        score = handler.find_optimal_parameters( exp.SKOPT_DIM, e['HYPERPARAM'], X, y, cv=exp.CV, kfold_splits=exp.FOLDS, 
-                                                num_calls=exp.SKOPTCALLS, max_epochs=exp.MAX_EPOCHS, batch_size=exp.BATCH_SIZE)
+        score = handler.find_optimal_parameters( exp.SKOPT_DIM, model_param, X, y, cv=exp.CV, kfold_splits=exp.FOLDS, 
+                                                num_calls=exp.SKOPTCALLS, max_epochs=exp.MAX_EPOCHS, batch_size=batch_size)
     elif mode == 'cv':
-        score = handler.kfold_val( X, y, model_param = e['HYPERPARAM'], kfold_splits = exp.FOLDS,
-                                   max_epochs = exp.MAX_EPOCHS, batch_size = exp.BATCH_SIZE)
+        score = handler.kfold_val( X, y, model_param = model_param, kfold_splits = exp.FOLDS,
+                                   max_epochs = exp.MAX_EPOCHS, batch_size = batch_size)
     else:
-        score = handler.run_training(X, y, batch_size = exp.BATCH_SIZE, max_epochs = exp.MAX_EPOCHS, 
-                                     model_param = e['HYPERPARAM'])    
+        score = handler.run_training(X, y, batch_size = batch_size, max_epochs = exp.MAX_EPOCHS, 
+                                     model_param = model_param)    
         
         
 
@@ -72,7 +78,32 @@ def train( i_exp = 0, mode = 'train' ):
     return score
 
 
+def retrain_best(i_exp = 0):
+    
+    # Experiment parameters
+    e = exp.EXPERIMENTS[ i_exp ]
+    
+    # Store path
+    outpath = exp.OUTPATH + e['NAME'] + '/'
+    file = outpath + 'skopt.h5'
+    best = pd.read_hdf(file).iloc[0].to_dict()
+    best.pop('call')
+    best.pop('cv_score')
+    best.pop('std')
+    batch_size = int(best.pop('batch_size'))
+    
+    train( i_exp, mode = 'cv', model_param = best, batch_size = batch_size )
+
+
 if __name__ == "__main__":
     
     print( "Start training" )
-    train(i_exp = 1, mode = 'train')
+    #train(i_exp = 0, mode = 'train')
+    retrain_best( i_exp = 2 )
+    
+    
+    
+    
+    
+    
+    

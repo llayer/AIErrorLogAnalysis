@@ -190,7 +190,8 @@ class FitHandler(object):
         return generator.get_counts_matrix()
     
         
-    def train_in_batches(self, X_train, X_test, batch_size_train, model_param = None, batch_size_val = 10, max_epochs = 20):
+    def train_in_batches(self, X_train, X_test, batch_size_train, model_param = None, batch_size_val = 10, max_epochs = 20,
+                         fold = None):
             
         
         class_weights = class_weight.compute_class_weight('balanced', np.unique( X_train['label']), X_train['label'])
@@ -244,7 +245,7 @@ class FitHandler(object):
         
         
 
-    def train(self, X_train, y_train, X_test, y_test, model_param = None, batch_size = 100, max_epochs = 200):
+    def train(self, X_train, y_train, X_test, y_test, model_param = None, batch_size = 100, max_epochs = 200, fold = None):
         
         if self.use_smote == True:
             X_train, y_train = self.smote(X_train, y_train)
@@ -255,13 +256,19 @@ class FitHandler(object):
         if model_param is not None:
             model.set_hyperparameters(model_param)
         model.create_model()
-                     
         
+        if fold is None:
+            store_path = self.path + '/'
+        else:
+            store_path = self.path + '/fold' + str(fold) + '_'
+            
         control_callback = model_utils.FitControl(mode = 'max', multiinput = False, verbose=self.verbose,
                                                   early_stopping = self.callback_args['es'], 
                                                   patience = self.callback_args['patience'],
                                                   kill_slowstarts = self.callback_args['kill_slowstarts'], 
-                                                  kill_threshold = self.callback_args['kill_threshold'])
+                                                  kill_threshold = self.callback_args['kill_threshold'],
+                                                  store_best_roc = self.callback_args['store_best_roc'],
+                                                  path = store_path)
         
         model.model.fit( X_train, y_train, validation_data = (X_test, y_test), 
                                            epochs = max_epochs, batch_size = batch_size, callbacks = [control_callback],
@@ -291,11 +298,11 @@ class FitHandler(object):
                 y_train, y_test = y[ index_train ], y[ index_valid ]
 
                 score = self.train( X_train, y_train, X_test, y_test, max_epochs = max_epochs, model_param = model_param,
-                                                         batch_size = batch_size)
+                                                         batch_size = batch_size, fold = i)
             else:
                 X_train, X_test = X[ index_train ], X[ index_valid ]
                 score = self.train_in_batches( X_train, X_test, max_epochs = max_epochs, model_param = model_param,
-                                                         batch_size_train = batch_size)
+                                                         batch_size_train = batch_size, fold = i)
             
             cvscores.append(score)
             

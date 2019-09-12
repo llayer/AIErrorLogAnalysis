@@ -26,7 +26,7 @@ SKOPT_DIM = [
 ]
 
 # Callback
-cb = { 'es': True, 'patience': 5, 'kill_slowstarts': False, 'kill_threshold': 0.5001 }
+cb = { 'es': True, 'patience': 5, 'kill_slowstarts': False, 'kill_threshold': 0.5001, 'store_best_roc': True }
 # Initial param
 hp = {'learning_rate':0.005675, 'dense_units':35, 'dense_layers' : 6, 'regulizer_value' : 0.001000, 'dropout_value' : 0.052315 }
 
@@ -42,7 +42,7 @@ EXPERIMENTS = [
     
     # 1st experiment 
     {'NAME': 'BASELINE', 'PRUNE': 'None',
-     'HYPERPARAM': hp, 'CALLBACK': cb } ,
+     'HYPERPARAM': hp, 'CALLBACK': cb} ,
     
     # 2nd experiment: prune the negative only sites
     {'NAME': 'BASELINE_PRUNE_NEG', 'PRUNE': 'Neg',

@@ -161,8 +161,8 @@ class InputBatchGenerator(object):
                             msg_t = msg
                             self.pad_dim = len(msg)
                         
-            if self.pad_dim > 200:
-                self.pad_dim = 200
+            if self.pad_dim > 400:
+                self.pad_dim = 400
         else:
             tokens_key = 'avg'
        

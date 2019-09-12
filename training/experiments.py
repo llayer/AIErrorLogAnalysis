@@ -15,27 +15,27 @@ PRUNING = 'Neg'
 # Skopt dimensions
 SKOPT_DIM = [
     Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
-    Real(        low=0.01, high=0.5,                       name='dropout'     ),
-    Real(        low=1e-3, high=0.9,  prior="log-uniform", name='l2_regulizer'   ),
-    #Integer(     low=2, high=100,                          name='rnn_units'   ),
-    Integer(     low=2, high = 20,                       name = 'units_site'    ),
-    Integer(     low=1,    high=5,                         name='dense_layers'      ),
-    Integer(     low=10,    high=100,                         name='dense_units'      ),
+    Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
+    #Real(        low=1e-4, high=0.9,  prior="log-uniform", name='l2_regulizer'   ),
+    Integer(     low=2, high=20,                          name='rnn_units'   ),
+    #Integer(     low=2, high = 20,                       name = 'units_site'    ),
+    Integer(     low=1,    high=3,                         name='dense_layers'      ),
+    Integer(     low=10,    high=50,                         name='dense_units'      ),
     #Integer(     low=0,    high=1,                         name='encode_sites'      ),
-    #Integer(     low=0,    high=1,                         name='train_embedding'      ),
+    Integer(     low=0,    high=1,                         name='train_embedding'      ),
     ]
 
 # batch_size and epochs 
-BATCH_SIZE = 100
-MAX_EPOCHS = 50
+BATCH_SIZE = 1
+MAX_EPOCHS = 20
 
 # sample
 SAMPLE = False
 SAMPLE_FACT = 5
 
 # batch generator param
-AVG_W2V = True
-MAX_WORDS = 50
+AVG_W2V = False
+MAX_WORDS = 400
 GEN_PARAM = {}
 GEN_PARAM['averaged'] = AVG_W2V
 GEN_PARAM['only_msg'] = MSG_ONLY 
@@ -51,12 +51,12 @@ MODEL = 'nlp_msg'
 EXPERIMENTS = [
     
     # 1st experiment initial parameter
-    {'NAME': 'NOMINAL', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg',
+    {'NAME': 'NOMINAL_t', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg',
      'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM', 
                    'attention': False, 'include_counts': True, 'avg_w2v': AVG_W2V},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
-                    'l2_regulizer': 0.0001, 'encode_sites': True, 'units_site': 10, 'dense_layers': 3, 
-                    'train_embedding': True, 'dense_units': 100, 'learning_rate':0.0001 } ,
+     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 20, 'activation_site': 'relu', 
+                    'l2_regulizer': 0.0001, 'encode_sites': False, 'units_site': 10, 'dense_layers': 5, 
+                    'train_embedding': True, 'dense_units': 50, 'learning_rate':0.0001 } ,
      'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
      
     } ,
