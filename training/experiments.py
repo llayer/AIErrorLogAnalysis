@@ -27,7 +27,7 @@ SKOPT_DIM = [
 
 # batch_size and epochs 
 BATCH_SIZE = 1
-MAX_EPOCHS = 20
+MAX_EPOCHS = 12
 
 # sample
 SAMPLE = False
@@ -60,12 +60,23 @@ EXPERIMENTS = [
      'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
      
     } ,
-    
-    # 2nd experiment averaged
+   
+    # 2nd experiment lower embedding
+    {'NAME': 'VAR_LOW', 'DIM':10, 'VOCAB': -1, 'ALGO': 'sg',
+     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM',
+                   'attention': False, 'include_counts': True, 'avg_w2v': AVG_W2V},
+     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu',
+                    'l2_regulizer': 0.0, 'encode_sites': False, 'units_site': 50, 'dense_layers': 3,
+                    'train_embedding': True, 'dense_units': 30, 'learning_rate':0.0001 } ,
+     'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
+
+    } ,
+ 
+    # 3nd experiment averaged
     {'NAME': 'AVG', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg',
      'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM', 
                    'attention': False, 'include_counts': True, 'avg_w2v': AVG_W2V},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
+     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.2, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
                     'l2_regulizer': 0.0001, 'encode_sites': False, 'units_site': 10, 'dense_layers': 3, 
                     'train_embedding': True, 'dense_units': 20, 'learning_rate':0.0001 } ,
      'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.5001 }
@@ -77,7 +88,7 @@ EXPERIMENTS = [
     {'NAME': 'TRAIN_EMBEDDINGS', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg' ,
      'NLP_PARAM': { 'cudnn': False, 'batch_norm': False, 'train_embedding': True, 'word_encoder': 'LSTM', 
                    'attention': False, 'encode_sites': True, 'include_counts': False},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
+     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 50, 'activation_site': 'relu', 
                     'units_site': 10, 'dense_layers': 3, 'dense_units': 20, 'learning_rate':0.0001 } ,
      
     } ,

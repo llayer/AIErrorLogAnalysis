@@ -17,8 +17,16 @@ def train( i_exp = 0, model_param = None ):
     e = exp.EXPERIMENTS[ i_exp ]
     
     # Load the data
-    path = exp.INPATH + 'input_' + 'NOMINAL' + '.h5'
-    e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'NOMINAL' + '.npy'
+    if 'VAR_LOW' in e['NAME']:
+        path = exp.INPATH + 'input_' + 'VAR_LOW' + '.h5'
+        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_LOW' + '.npy'
+    elif 'VAR_DIM' in e['NAME']:
+        path = exp.INPATH + 'input_' + 'VAR_DIM' + '.h5'
+        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_DIM' + '.npy'
+        
+    else:
+        path = exp.INPATH + 'input_' + 'NOMINAL' + '.h5'
+        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'NOMINAL' + '.npy'
     actionshist, codes, sites = fit_handler.load_data(path, msg_only=exp.MSG_ONLY,
                                                       sample=exp.SAMPLE, sample_fact = exp.SAMPLE_FACT)
     
@@ -41,7 +49,7 @@ def train( i_exp = 0, model_param = None ):
 if __name__ == "__main__":
     
     print( "Start training" )
-    train(i_exp = 0)
+    train(i_exp = 1)
 
 
 

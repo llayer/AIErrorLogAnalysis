@@ -6,7 +6,7 @@ if module_path not in sys.path:
 import numpy as np
 import keras
 from keras.layers import Embedding, Input, Dense, LSTM, GRU, Bidirectional, TimeDistributed, Dropout, Flatten, Reshape
-from keras.layers import average, Concatenate, Lambda, CuDNNLSTM, CuDNNGRU, Conv1D, GlobalMaxPooling1D, MaxPooling1D
+from keras.layers import average, Concatenate, Lambda, CuDNNLSTM, CuDNNGRU, Conv1D, GlobalMaxPooling1D, MaxPooling1D, AveragePooling1D
 from keras.regularizers import l2
 from keras.models import Model
 from keras.optimizers import Adam
@@ -99,7 +99,7 @@ class NLP(BaseModel):
         """
         
         embedding = Embedding(dims_embed[0], dims_embed[1], weights=[self.embedding_matrix], \
-                  input_length = self.max_sequence_length, mask_zero = True, trainable = int(self.hp['train_embedding']))
+                  input_length = None, mask_zero = True, trainable = int(self.hp['train_embedding']))
     
         return embedding
     
@@ -118,6 +118,7 @@ class NLP(BaseModel):
             else:
                 word_lstm = self.hp['rnn'](int(self.hp['rnn_units']), kernel_regularizer=l2(self.hp['l2_regulizer']),
                                           recurrent_dropout = self.hp['rec_dropout'])(word_sequences)
+            #word_lstm = Dense(5, activation = "relu", kernel_initializer="normal")(word_lstm)
             wordEncoder = Model(word_input, word_lstm)
         else:
             if self.cudnn == True:
@@ -129,7 +130,8 @@ class NLP(BaseModel):
             word_dense = TimeDistributed(Dense(int(self.hp['att_units'])))(word_lstm)
             word_att = AttentionWithContext()(word_dense)
             wordEncoder = Model(word_input, word_att)
-        
+        if self.verbose == 1:
+            wordEncoder.summary()     
         return wordEncoder
     
 
@@ -249,6 +251,8 @@ class NLP(BaseModel):
             if self.batch_norm == True:
                 exit_code_encoder = BatchNormalization()(exit_code_encoder)
             """
+
+        #exit_code_encoder = AveragePooling1D(pool_size = 2, data_format='channels_first')(exit_code_site_repr)
             
         # Flatten
         flattened = Flatten()(exit_code_encoder)
