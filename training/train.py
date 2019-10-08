@@ -23,7 +23,9 @@ def train( i_exp = 0, model_param = None ):
     elif 'VAR_DIM' in e['NAME']:
         path = exp.INPATH + 'input_' + 'VAR_DIM' + '.h5'
         e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_DIM' + '.npy'
-        
+    elif 'AVG' in e['NAME']:
+        path = exp.INPATH + 'input_' + 'VAR_DIM' + '.h5'
+        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_DIM' + '.npy'        
     else:
         path = exp.INPATH + 'input_' + 'NOMINAL' + '.h5'
         e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'NOMINAL' + '.npy'
@@ -37,11 +39,15 @@ def train( i_exp = 0, model_param = None ):
                                      train_on_batch = exp.TRAIN_ON_BATCH )
 
     if model_param is None:
-        score = handler.run_training(actionshist, batch_size = exp.BATCH_SIZE, max_epochs = exp.MAX_EPOCHS, 
-                                     model_param = e['HYPERPARAM'])
+        #score = handler.run_training(actionshist, batch_size = exp.BATCH_SIZE, max_epochs = exp.MAX_EPOCHS, 
+        #                             model_param = e['HYPERPARAM'])
+        cvscores = handler.kfold_val( actionshist, model_param = e['HYPERPARAM'], kfold_splits = exp.FOLDS,
+                   max_epochs = exp.MAX_EPOCHS, batch_size = exp.BATCH_SIZE)
     else:
-        score = handler.run_training(actionshist, batch_size = exp.BATCH_SIZE, max_epochs = exp.MAX_EPOCHS, 
-                                     model_param = model_param)
+        #score = handler.run_training(actionshist, batch_size = exp.BATCH_SIZE, max_epochs = exp.MAX_EPOCHS, 
+        #                             model_param = model_param)
+        cvscores = handler.kfold_val( actionshist, model_param = model_param, kfold_splits = exp.FOLDS,
+                           max_epochs = exp.MAX_EPOCHS, batch_size = exp.BATCH_SIZE)
     
     return score
 
@@ -49,7 +55,7 @@ def train( i_exp = 0, model_param = None ):
 if __name__ == "__main__":
     
     print( "Start training" )
-    train(i_exp = 1)
+    train(i_exp = 4)
 
 
 

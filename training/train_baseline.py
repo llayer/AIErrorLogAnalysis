@@ -71,9 +71,6 @@ def train( i_exp = 0, mode = 'train', model_param = None, batch_size = None ):
     else:
         score = handler.run_training(X, y, batch_size = batch_size, max_epochs = exp.MAX_EPOCHS, 
                                      model_param = model_param)    
-        
-        
-
     
     return score
 
@@ -98,8 +95,8 @@ def retrain_best(i_exp = 0):
 if __name__ == "__main__":
     
     print( "Start training" )
-    #train(i_exp = 0, mode = 'train')
-    retrain_best( i_exp = 2 )
+    train(i_exp = 1, mode = 'optimize')
+    #retrain_best( i_exp = 0 )
     
     
     

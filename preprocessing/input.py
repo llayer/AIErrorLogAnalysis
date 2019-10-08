@@ -133,6 +133,10 @@ if do_input == True:
         print( 'Input:', exp )    
         path_tokens = PATH_ENCODING + 'tokens_index_' + exp['NAME'] + '.h5'
         input_generator.create_input(PATH_ACTIONSHIST, path_tokens, name = exp['NAME'], store_path = PATH_INPUT)
+
+if do_labels == True:
+    
+    print( 'Generate labels' )
     
     
 if do_test == True:

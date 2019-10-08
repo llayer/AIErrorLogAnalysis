@@ -42,9 +42,20 @@ def evaluate( o , fold = None):
     
     
     # Load the data
-    name = 'NOMINAL'
-    path = exp.INPATH + 'input_' + name + '.h5'
-    e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + name + '.npy'
+    if 'VAR_LOW' in e['NAME']:
+        path = exp.INPATH + 'input_' + 'VAR_LOW' + '.h5'
+        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_LOW' + '.npy'
+    elif 'VAR_DIM' in e['NAME']:
+        path = exp.INPATH + 'input_' + 'VAR_DIM' + '.h5'
+        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_DIM' + '.npy'
+    elif 'AVG' in e['NAME']:
+        path = exp.INPATH + 'input_' + 'VAR_DIM' + '.h5'
+        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_DIM' + '.npy'        
+    else:
+        path = exp.INPATH + 'input_' + 'NOMINAL' + '.h5'
+        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'NOMINAL' + '.npy'
+        
+    
     actionshist, codes, sites = fit_handler.load_data(path, msg_only=exp.MSG_ONLY,
                                                       sample=exp.SAMPLE, sample_fact = exp.SAMPLE_FACT)
     
@@ -52,7 +63,7 @@ def evaluate( o , fold = None):
     handler = fit_handler.FitHandler( exp.MODEL, codes, sites, exp.MAX_WORDS, 
                                      exp.GEN_PARAM, pruning_mode = exp.PRUNING,
                                      model_args = e['NLP_PARAM'], callback_args = e['CALLBACK'],
-                                     train_on_batch = exp.TRAIN_ON_BATCH )
+                                     train_on_batch = exp.TRAIN_ON_BATCH, verbose=2 )
     
     # Initial hyper parameters
     model_param = e['HYPERPARAM']
@@ -60,11 +71,18 @@ def evaluate( o , fold = None):
     for name, value in o.items():
         model_param[name] = value
 
+    """    
     score = handler.run_training(actionshist, batch_size = exp.BATCH_SIZE, max_epochs = exp.MAX_EPOCHS, 
                                      model_param = model_param)
-
-    value = -1 * score
-    print( value )
+    """
+    
+    cvscores = handler.kfold_val( actionshist, model_param = model_param, kfold_splits = exp.FOLDS,
+                               max_epochs = exp.MAX_EPOCHS, batch_size = exp.BATCH_SIZE)
+    #value = -1 * score
+    #print( value )
+    
+    value = -1 * np.mean( cvscores )
+    std_dv = np.std( cvscores )
     
     #X = (o['learning_rate'], o['learning_rate']*2)
     #value = dummy_func( X , fold = fold)
@@ -72,7 +90,8 @@ def evaluate( o , fold = None):
     res = {
         'result': value,
         'params' : o,
-        'annotate' : 'a free comment'
+        'annotate' : 'a free comment',
+        'std_dv': std_dv
     }
     print( res )
     if fold is not None:

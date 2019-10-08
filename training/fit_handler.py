@@ -31,12 +31,10 @@ set_session(sess)  # set this TensorFlow session as the default session for Kera
 
 
 #path = '/nfshome/llayer/data/input_msg.h5'
-def load_data(path, msg_only = False, sample = False, sample_fact = 3):
+def load_data(path, load_labels = True, msg_only = False, sample = False, sample_fact = 3):
 
     actionshist = pd.read_hdf(path, 'frame')
-    
-    print( actionshist['label'].value_counts() )
-    
+    print( len(actionshist) )
     if sample == True:
         minority_class = actionshist[actionshist['label'] == 1]
         n_samples = int(sample_fact*len(minority_class))
@@ -52,7 +50,14 @@ def load_data(path, msg_only = False, sample = False, sample_fact = 3):
         sites = pd.read_hdf(path, 'frame5')
         codes.rename({'errors_msg': 'error'}, axis=1, inplace=True)
         sites.rename({'sites_msg': 'site'}, axis=1, inplace=True)
+    
+    if load_labels == True:
+        actionshist = actionshist.drop(['label'], axis=1)
+        labels = pd.read_hdf('/nfshome/llayer/AIErrorLogAnalysis/data/labels.h5')
+        actionshist = pd.merge( actionshist, labels, on = ['task_name'], how='inner')
         
+    print( actionshist['label'].value_counts() )
+    
     return actionshist, codes, sites
 
 
@@ -105,7 +110,8 @@ class FitHandler(object):
                                      word_encoder = self.model_args['word_encoder'], 
                                      include_counts = self.model_args['include_counts'], 
                                      avg_w2v = self.model_args['avg_w2v'],
-                                     attention = self.model_args['attention'] ) 
+                                     attention = self.model_args['attention'],
+                                     init_embedding = self.model_args['init_embedding']) 
             else:
                 return nlp_model.NLP(2, self.dim_errors, self.dim_sites, self.embedding_dim ) 
                 
@@ -300,7 +306,8 @@ class FitHandler(object):
                 score = self.train( X_train, y_train, X_test, y_test, max_epochs = max_epochs, model_param = model_param,
                                                          batch_size = batch_size, fold = i)
             else:
-                X_train, X_test = X[ index_train ], X[ index_valid ]
+                print( 'Fold', i)
+                X_train, X_test = X.iloc[ index_train ], X.iloc[ index_valid ]
                 score = self.train_in_batches( X_train, X_test, max_epochs = max_epochs, model_param = model_param,
                                                          batch_size_train = batch_size, fold = i)
             

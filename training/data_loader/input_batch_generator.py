@@ -186,8 +186,10 @@ class InputBatchGenerator(object):
                                                                           batch['site_state'], batch[tokens_key]))]
         
         if self.only_msg == False:
+            #print( np.count_nonzero(self.error_site_tokens) )
             #self.error_site_tokens = np.reshape(
-            return [self.error_site_tokens.reshape((chunk_size, self.unique_codes * self.unique_sites, self.pad_dim)) , self.error_site_counts]   
+            return [self.error_site_tokens.reshape((chunk_size, self.unique_codes * self.unique_sites, self.pad_dim)) , 
+                    self.error_site_counts]   
         else:
             return self.error_site_tokens
     

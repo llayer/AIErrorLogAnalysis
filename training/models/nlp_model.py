@@ -24,7 +24,7 @@ class NLP(BaseModel):
     
     def __init__(self, num_classes, num_error, num_sites, max_sequence_length, embedding_matrix_path,
                  cudnn = False, batch_norm = False, word_encoder = 'LSTM', encode_sites = True, attention = False,
-                 include_counts = False, avg_w2v = False, verbose = 1):
+                 include_counts = False, avg_w2v = False, init_embedding = True, verbose = 1):
         
         embedding_matrix = np.load(embedding_matrix_path)
         self.embedding_matrix = embedding_matrix.astype('float32')
@@ -35,6 +35,7 @@ class NLP(BaseModel):
         self.max_senten_num = num_error * num_sites
         self.cudnn = cudnn
         self.attention = attention
+        self.init_embedding = init_embedding
         self.word_encoder = word_encoder
         self.encode_sites = encode_sites
         self.batch_norm = batch_norm
@@ -54,15 +55,17 @@ class NLP(BaseModel):
             'units_conv':10,
             # RNN with optional attention
             'train_embedding': False,
-            'att_units':10,
+            'att_units':15,
             'rec_dropout':0.0,
             'rnn': LSTM, #TRY GRU
             'rnncud': CuDNNLSTM, # TRY CuDNNGRU
             'rnn_units' : 10,
+            'embedding': 20,
             # Site encoding
             'encode_sites': False,
             'activation_site': 'relu', #TRY linear
             'units_site': 10,
+            'pool_size':2,
             # Final layers
             'dense_layers': 3,
             'dense_units': 20,
@@ -91,16 +94,23 @@ class NLP(BaseModel):
     def get_embedding_layer( self ):
         
         dims_embed = self.embedding_matrix.shape
-        """
-        if self.cudnn == True or self.word_encoder == 'Conv1D':
+        print ( 'Embedding', self.init_embedding )
+        if self.init_embedding == True:
+            
+            """
+            if self.cudnn == True or self.word_encoder == 'Conv1D':
+                embedding = Embedding(dims_embed[0], dims_embed[1], weights=[self.embedding_matrix], \
+                                      input_length = self.max_sequence_length, trainable = self.train_embedding)
+            else:
+            """
+
             embedding = Embedding(dims_embed[0], dims_embed[1], weights=[self.embedding_matrix], \
-                                  input_length = self.max_sequence_length, trainable = self.train_embedding)
+                      input_length = None, mask_zero = True, trainable = int(self.hp['train_embedding']))
         else:
-        """
-        
-        embedding = Embedding(dims_embed[0], dims_embed[1], weights=[self.embedding_matrix], \
-                  input_length = None, mask_zero = True, trainable = int(self.hp['train_embedding']))
-    
+            print( 'Embedding', self.hp['embedding'] )
+            embedding = Embedding(dims_embed[0], int(self.hp['embedding']), mask_zero = True)            
+            
+        print( embedding )
         return embedding
     
     
@@ -196,7 +206,10 @@ class NLP(BaseModel):
             
             # Encode the words of the sentences
             if self.word_encoder == 'LSTM':
-                encoder_units = int(self.hp['rnn_units'])
+                if self.attention == False:
+                    encoder_units = int(self.hp['rnn_units'])
+                else:
+                    encoder_units = int(self.hp['att_units'])
                 sent_encoder = TimeDistributed(self.word_encoder_lstm())(sent_input)
             elif self.word_encoder == 'Conv1D':
                 encoder_units = self.hp['units_conv']
@@ -218,10 +231,14 @@ class NLP(BaseModel):
         else:
             
             sent_input = Input(shape = (self.num_error * self.num_sites, self.max_sequence_length), dtype='float32')
-            sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, self.max_sequence_length))(sent_input)
-            sent_encoder_reshaped = TimeDistributed(Dense(int(self.hp['units_site']), activation = self.hp['activation_site'], 
-                      kernel_regularizer=l2(self.hp['l2_regulizer'])))(sent_encoder_reshaped)
-            encoder_units = int(self.hp['units_site'])
+            encoder_units = int(self.max_sequence_length / int(self.hp['pool_size']))
+            sent_pool = AveragePooling1D(pool_size = int(self.hp['pool_size']), data_format='channels_first')(sent_input)
+            sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, encoder_units))(sent_pool)
+            #sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, self.max_sequence_length))(sent_pool)
+            #sent_encoder_reshaped = TimeDistributed(Dense(int(self.hp['units_site']), activation = self.hp['activation_site'], 
+            #          kernel_regularizer=l2(self.hp['l2_regulizer'])))(sent_encoder_reshaped)
+            #encoder_units = int(self.hp['units_site'])
+            #encoder_units = self.max_sequence_length
         
         # Add the meta information
         if self.include_counts == True:

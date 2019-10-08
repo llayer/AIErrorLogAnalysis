@@ -6,7 +6,7 @@ INPATH = '/nfshome/llayer/AIErrorLogAnalysis/data/'
 #INPATH = '/imdata/error_log_analysis/data/'
 OUTPATH = '/nfshome/llayer/AIErrorLogAnalysis/experiments_baseline/'
 
-FOLDS = 5
+FOLDS = 3
 SKOPTCALLS = 30
 CV = True
 
@@ -21,12 +21,12 @@ SKOPT_DIM = [
     Integer(     low=10,    high=100,                        name='dense_units'     ),
     Integer(     low=2,    high=8,                        name='dense_layers'       ),
     Real(        low=1e-5, high=0.9,  prior="log-uniform", name='regulizer_value'   ),
-    Real(        low=0.01, high=0.5,                       name='dropout_value'     ),
+    Real(        low=0.0, high=0.5,                       name='dropout_value'     ),
     Integer(     low=500,   high = 5000,                    name='batch_size'       )
 ]
 
 # Callback
-cb = { 'es': True, 'patience': 5, 'kill_slowstarts': False, 'kill_threshold': 0.5001, 'store_best_roc': True }
+cb = { 'es': True, 'patience': 10, 'kill_slowstarts': False, 'kill_threshold': 0.5001, 'store_best_roc': False }
 # Initial param
 hp = {'learning_rate':0.005675, 'dense_units':35, 'dense_layers' : 6, 'regulizer_value' : 0.001000, 'dropout_value' : 0.052315 }
 
