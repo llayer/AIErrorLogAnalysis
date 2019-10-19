@@ -36,14 +36,14 @@ class InputBatchGenerator(object):
     def pad_along_axis(self, array, axis=0):
 
         array = np.array(array)
-        pad_size = self.max_words - array.shape[axis]
+        pad_size = self.pad_dim - array.shape[axis]
         axis_nb = len(array.shape)
 
         if pad_size < 0:
             if self.cut_front == True:
-                return array[-self.max_words : ]
+                return array[-self.pad_dim : ]
             else:
-                return array[ : self.max_words ]
+                return array[ : self.pad_dim ]
 
         npad = [(0, 0) for x in range(axis_nb)]
         npad[axis] = (0, pad_size)
@@ -161,6 +161,7 @@ class InputBatchGenerator(object):
                         
             if pad_dim > self.max_words:
                 pad_dim = self.max_words
+            self.pad_dim = pad_dim
         else:
             tokens_key = 'avg'
        
@@ -172,9 +173,9 @@ class InputBatchGenerator(object):
         self.error_site_counts = np.zeros((chunk_size, self.unique_codes, self.unique_sites, 2), dtype=np.int32)
         
         if self.sequence == True:
-            dim = (chunk_size, self.unique_codes, self.unique_sites, self.max_msg, pad_dim)
+            dim = (chunk_size, self.unique_codes, self.unique_sites, self.max_msg, self.pad_dim)
         else:
-            dim = (chunk_size, self.unique_codes, self.unique_sites, pad_dim)    
+            dim = (chunk_size, self.unique_codes, self.unique_sites, self.pad_dim)    
         
         
         # Error message matrix
@@ -186,7 +187,7 @@ class InputBatchGenerator(object):
         if self.only_msg == False:
             #print( np.count_nonzero(self.error_site_tokens) )
             #self.error_site_tokens = np.reshape(
-            return [self.error_site_tokens.reshape((chunk_size, self.unique_codes * self.unique_sites, pad_dim)) , 
+            return [self.error_site_tokens.reshape((chunk_size, self.unique_codes * self.unique_sites, self.pad_dim)) , 
                     self.error_site_counts]   
         else:
             return self.error_site_tokens
