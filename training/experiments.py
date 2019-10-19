@@ -16,6 +16,7 @@ class BaseExperiment(object):
         self.batch_size = batch_size
         self.max_epochs = max_epochs
         self.max_words = max_words
+        self.pruning = pruning
         self.folds = folds
         self.msg_only = msg_only
         self.train_on_batch = train_on_batch
@@ -24,11 +25,11 @@ class BaseExperiment(object):
         
         # batch generator param
         self.gen_param = {}
-        self.['averaged'] = AVG_W2V
-        self.['only_msg'] = MSG_ONLY 
-        self.['sequence'] = False
-        self.['max_msg'] = 1
-        self.['cut_front'] = True
+        self.gen_param['averaged'] = avg_w2v
+        self.gen_param['only_msg'] = msg_only 
+        self.gen_param['sequence'] = False
+        self.gen_param['max_msg'] = 1
+        self.gen_param['cut_front'] = True
         
         # Callback
         self.callback = { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
@@ -39,7 +40,7 @@ class BaseExperiment(object):
         
         self.nlp_param = {'cudnn': cudnn, 'batch_norm': batch_norm, 'word_encoder': word_encoder, 
                          'attention': attention, 'include_counts': include_counts, 
-                         'avg_w2v': self.avg_w2v, 'init_embedding': init_embedding}      
+                         'avg_w2v' : self.avg_w2v, 'init_embedding': init_embedding}      
         
         
     def set_hp(self, dropout = 0.0, rec_dropout = 0.0, rnn = GRU, rnn_units = 20, activation_site = 'relu', 

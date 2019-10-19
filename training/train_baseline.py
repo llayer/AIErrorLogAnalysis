@@ -2,6 +2,7 @@ import os
 import shutil
 import setGPU
 import pandas as pd
+import numpy as np
 import psutil
 import fit_handler
 import warnings
@@ -29,7 +30,7 @@ def create_dir(path, overwrite):
             print( 'Create directory:', path )
 
 
-def train( i_exp = 0, mode = 'train', model_param = None, batch_size = None ):
+def train( i_exp = 0, mode = 'train', model_param = None, batch_size = None, sample_frac = None ):
     
     # Memory before the training
     mem = psutil.virtual_memory()
@@ -40,12 +41,18 @@ def train( i_exp = 0, mode = 'train', model_param = None, batch_size = None ):
     
     # Store path
     overwrite = False
-    outpath = exp.OUTPATH + e['NAME'] + '/'
+    if sample_frac == None:
+        outpath = exp.OUTPATH + e['NAME'] + '/'
+    else:
+        outpath = exp.OUTPATH + e['NAME'] + '/sample_frac_best' + str(sample_frac) + '/'
     create_dir(outpath, overwrite)
     
     # Load the data
     inpath = exp.INPATH + 'input_NOMINAL' + '.h5'
-    actionshist, codes, sites = fit_handler.load_data(inpath)
+    if sample_frac == None:
+        actionshist, codes, sites = fit_handler.load_data(inpath)
+    else:
+        actionshist, codes, sites = fit_handler.load_data(inpath, load_labels = False, sample = True, sample_frac = sample_frac)
     
     # Setup the fit handler
     handler = fit_handler.FitHandler( exp.MODEL, codes, sites, pruning_mode = e['PRUNE'],
@@ -95,7 +102,10 @@ def retrain_best(i_exp = 0):
 if __name__ == "__main__":
     
     print( "Start training" )
-    train(i_exp = 1, mode = 'optimize')
+    #train(i_exp = 1, mode = 'train')
+    fractions = np.linspace(0.1, 1, 10, endpoint=True)
+    for f in fractions:
+        train(i_exp = 1, mode = 'cv', sample_frac = f)
     #retrain_best( i_exp = 0 )
     
     

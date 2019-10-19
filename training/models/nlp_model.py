@@ -230,14 +230,16 @@ class NLP(BaseModel):
          
         else:
             
-            sent_input = Input(shape = (self.num_error * self.num_sites, self.max_sequence_length), dtype='float32')
-            encoder_units = int(self.max_sequence_length / int(self.hp['pool_size']))
-            sent_pool = AveragePooling1D(pool_size = int(self.hp['pool_size']), data_format='channels_first')(sent_input)
-            sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, encoder_units))(sent_pool)
+            #sent_input = Input(shape = (self.num_error * self.num_sites, self.max_sequence_length), dtype='float32')
+            #encoder_units = int(self.max_sequence_length / int(self.hp['pool_size']))
+            #sent_pool = AveragePooling1D(pool_size = int(self.hp['pool_size']), data_format='channels_first')(sent_input)
+            #sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, encoder_units))(sent_pool)
             #sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, self.max_sequence_length))(sent_pool)
-            #sent_encoder_reshaped = TimeDistributed(Dense(int(self.hp['units_site']), activation = self.hp['activation_site'], 
-            #          kernel_regularizer=l2(self.hp['l2_regulizer'])))(sent_encoder_reshaped)
-            #encoder_units = int(self.hp['units_site'])
+            sent_input = Input(shape = (self.num_error * self.num_sites, self.max_sequence_length), dtype='float32')
+            sent_encoder_reshaped = Reshape(( self.num_error , self.num_sites, self.max_sequence_length))(sent_input)
+            sent_encoder_reshaped = TimeDistributed(Dense(int(self.hp['units_site']), activation = self.hp['activation_site'], 
+                       kernel_regularizer=l2(self.hp['l2_regulizer'])))(sent_encoder_reshaped)
+            encoder_units = int(self.hp['units_site'])
             #encoder_units = self.max_sequence_length
         
         # Add the meta information
