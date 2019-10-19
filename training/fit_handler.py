@@ -31,16 +31,25 @@ set_session(sess)  # set this TensorFlow session as the default session for Kera
 
 
 #path = '/nfshome/llayer/data/input_msg.h5'
-def load_data(path, load_labels = True, msg_only = False, sample = False, sample_fact = 3):
+def load_data(path, load_labels = True, msg_only = False, sample = False, sample_frac = 0.1):
 
     actionshist = pd.read_hdf(path, 'frame')
     print( len(actionshist) )
     if sample == True:
+        
+        """
         minority_class = actionshist[actionshist['label'] == 1]
         n_samples = int(sample_fact*len(minority_class))
         majority_class_sampled = actionshist[actionshist['label'] == 0].sample(n_samples , random_state=42)
         print('After sampling:', 'Minority class', len(minority_class), 'Majority class', len(majority_class_sampled) )
         actionshist = pd.concat([minority_class, majority_class_sampled])
+        """
+        
+        total = len(actionshist)
+        n_samples = int(total * sample_frac)
+        actionshist = actionshist.sample(n_samples , random_state=42)
+        print( len(actionshist) )
+        
     
     if msg_only == False:
         sites = pd.read_hdf(path, 'frame2')

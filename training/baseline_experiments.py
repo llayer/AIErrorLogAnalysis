@@ -1,18 +1,18 @@
 from skopt.space import Real, Categorical, Integer
 
 #Path to the input files
-INPATH = '/nfshome/llayer/AIErrorLogAnalysis/data/'
+INPATH = '/storage/user/llayer/AIErrorLogAnalysis/data/'
 # Test the fast I/O
 #INPATH = '/imdata/error_log_analysis/data/'
-OUTPATH = '/nfshome/llayer/AIErrorLogAnalysis/experiments_baseline/'
+OUTPATH = '/storage/user/llayer/AIErrorLogAnalysis/experiments_baseline/'
 
 FOLDS = 3
-SKOPTCALLS = 30
+SKOPTCALLS = 15
 CV = True
 
 # Epochs
 MAX_EPOCHS = 200
-BATCH_SIZE = 2000
+BATCH_SIZE = 1000
 MAX_WORDS = 0
 
 # Skopt dimensions
@@ -22,7 +22,7 @@ SKOPT_DIM = [
     Integer(     low=2,    high=8,                        name='dense_layers'       ),
     Real(        low=1e-5, high=0.9,  prior="log-uniform", name='regulizer_value'   ),
     Real(        low=0.0, high=0.5,                       name='dropout_value'     ),
-    Integer(     low=500,   high = 5000,                    name='batch_size'       )
+    Integer(     low=100,   high = 2000,                    name='batch_size'       )
 ]
 
 # Callback

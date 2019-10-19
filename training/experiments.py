@@ -2,163 +2,161 @@ import keras
 from keras.layers import LSTM, GRU, CuDNNLSTM, CuDNNGRU
 from skopt.space import Real, Categorical, Integer
 
-#Path to the input files
-INPATH = '/nfshome/llayer/AIErrorLogAnalysis/data/'
-# Test the fast I/O
-#INPATH = '/imdata/error_log_analysis/data/'
-OUTPATH = '/nfshome/llayer/AIErrorLogAnalysis/experiments/'
-
-# Average the vectors
-AVG_W2V = False
-FOLDS = 3
-
-# Include counts
-MSG_ONLY = False
-PRUNING = 'Neg'
-
-if AVG_W2V == False:
+class BaseExperiment(object):
     
-    # Skopt dimensions
-    SKOPT_DIM = [
-        Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
-        Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
-        #Real(        low=1e-4, high=0.9,  prior="log-uniform", name='l2_regulizer'   ),
-        Integer(     low=5, high=32,                          name='embedding'   ),
-        Integer(     low=2, high=32,                          name='rnn_units'   ),
-        #Integer(     low=2, high = 20,                       name = 'units_site'    ),
-        Integer(     low=1,    high=5,                         name='dense_layers'      ),
-        Integer(     low=10,    high=50,                         name='dense_units'      ),
-        #Integer(     low=2,    high=20,                         name='att_units'      ),
-        #Integer(     low=0,    high=1,                         name='encode_sites'      ),
-        #Integer(     low=0,    high=1,                         name='train_embedding'      ),
-        ]
-
-    # batch_size and epochs 
-    BATCH_SIZE = 1
-    MAX_EPOCHS = 12
-    MAX_WORDS = 400
+    def __init__(self, name, batch_size, max_epochs, max_words, avg_w2v = False, pruning = 'Neg', folds = 3, 
+                 train_on_batch = True, msg_only = False, model = 'nlp_msg'):
+        
+        # Paths
+        self.inpath = '/storage/user/llayer/AIErrorLogAnalysis/data/'
+        self.outpath = '/storage/user/llayer/AIErrorLogAnalysis/experiments/'
+        
+        # Base variables
+        self.name = name
+        self.batch_size = batch_size
+        self.max_epochs = max_epochs
+        self.max_words = max_words
+        self.folds = folds
+        self.msg_only = msg_only
+        self.train_on_batch = train_on_batch
+        self.avg_w2v = avg_w2v
+        self.model = model
+        
+        # batch generator param
+        self.gen_param = {}
+        self.['averaged'] = AVG_W2V
+        self.['only_msg'] = MSG_ONLY 
+        self.['sequence'] = False
+        self.['max_msg'] = 1
+        self.['cut_front'] = True
+        
+        # Callback
+        self.callback = { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
     
-else:
     
-    # Skopt dimensions
-    SKOPT_DIM = [
-        Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
-        Real(        low=1e-5, high=0.1, prior='log-uniform', name='dropout'     ),
-        Real(        low=1e-5, high=0.9,  prior="log-uniform", name='l2_regulizer'   ),
-        #Integer(     low=2, high = 20,                       name = 'units_site'    ),
-        Integer(     low=2,    high=10,                         name='pool_size'      ),
-        Integer(     low=1,    high=5,                         name='dense_layers'      ),
-        Integer(     low=10,    high=100,                         name='dense_units'      ),
-        ]
+    def set_nlp_param(self, attention = False, cudnn = False, batch_norm = False, word_encoder = 'LSTM', 
+                      include_counts = True, init_embedding = True):
+        
+        self.nlp_param = {'cudnn': cudnn, 'batch_norm': batch_norm, 'word_encoder': word_encoder, 
+                         'attention': attention, 'include_counts': include_counts, 
+                         'avg_w2v': self.avg_w2v, 'init_embedding': init_embedding}      
+        
+        
+    def set_hp(self, dropout = 0.0, rec_dropout = 0.0, rnn = GRU, rnn_units = 20, activation_site = 'relu', 
+                    l2_regulizer = 0.0001, encode_sites = False, units_site = 10, dense_layers = 5, 
+                    train_embedding = True, dense_units = 50, learning_rate = 0.0001):
+        
+        self.hyperparam = { 'dropout': dropout, 'rec_dropout':rec_dropout, 'rnn': rnn, 'rnn_units' : rnn_units,
+                           'activation_site': activation_site, 'l2_regulizer': l2_regulizer, 'encode_sites': encode_sites, 
+                           'units_site': units_site, 'dense_layers': dense_layers, 'train_embedding': train_embedding, 
+                           'dense_units': dense_units,  'learning_rate': learning_rate }
+        
+    def set_skopt_dim(self, skopt_dim):
+        
+        self.skopt_dim = skopt_dim
+               
 
-    # batch_size and epochs 
-    BATCH_SIZE = 100
-    MAX_EPOCHS = 200
-    MAX_WORDS = 20
-
-# sample
-SAMPLE = False
-SAMPLE_FACT = 5
-
-# batch generator param
-GEN_PARAM = {}
-GEN_PARAM['averaged'] = AVG_W2V
-GEN_PARAM['only_msg'] = MSG_ONLY 
-GEN_PARAM['sequence'] = False
-GEN_PARAM['max_msg'] = 1
-GEN_PARAM['cut_front'] = True
-TRAIN_ON_BATCH = True
-
-# Model
-MODEL = 'nlp_msg'
-
-# Defines the input experiments for the machine learning
-EXPERIMENTS = [
     
-    # 1st experiment initial parameter
-    {'NAME': 'NOMINAL_t', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg',
-     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM', 
-                   'attention': False, 'include_counts': True, 'avg_w2v': AVG_W2V, 'init_embedding': True},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 20, 'activation_site': 'relu', 
-                    'l2_regulizer': 0.0001, 'encode_sites': False, 'units_site': 10, 'dense_layers': 5, 
-                    'train_embedding': True, 'dense_units': 50, 'learning_rate':0.0001 } ,
-     'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
-     
-    } ,
-   
-    # 2nd experiment lower embedding
-    {'NAME': 'VAR_DIM', 'DIM':20, 'VOCAB': -1, 'ALGO': 'sg',
-     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM',
-                   'attention': False, 'include_counts': True, 'avg_w2v': AVG_W2V, 'init_embedding': True},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu',
-                    'l2_regulizer': 0.0, 'encode_sites': False, 'units_site': 50, 'dense_layers': 3,
-                    'train_embedding': True, 'dense_units': 30, 'learning_rate':0.0001 } ,
-     'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
+    
+# 1st experiment
+nominal = BaseExperiment('NOMINAL', batch_size = 1, max_epochs = 15, max_words = 400)
+# Skopt dimensions
+skopt_dim_nominal = [
+    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
+    Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
+    Real(        low=1e-4, high=0.9,  prior="log-uniform", name='l2_regulizer'   ),
+    Integer(     low=5, high=50,                          name='rnn_units'   ),
+    Integer(     low=1,    high=5,                         name='dense_layers'      ),
+    Integer(     low=10,    high=50,                         name='dense_units'      ),
+    ]
+nominal.set_hp()
+nominal.set_nlp_param()
+nominal.set_skopt_dim(skopt_dim_nominal)
 
-    } ,
+    
+# 2nd experiment lower embedding
+dim20 = BaseExperiment('VAR_DIM', batch_size = 1, max_epochs = 15, max_words = 400)
+skopt_dim_20 = [
+    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
+    Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
+    Integer(     low=2, high=20,                          name='rnn_units'   ),
+    Integer(     low=1,    high=5,                         name='dense_layers'      ),
+    Integer(     low=10,    high=50,                         name='dense_units'      ),
+    Integer(     low=0,    high=1,                         name='train_embedding'      ),
+    ]
+dim20.set_hp()
+dim20.set_nlp_param()
+dim20.set_skopt_dim(skopt_dim_20)
+
+
+
+# 3nd experiment averaged
+avg = BaseExperiment('AVG', batch_size = 100, max_epochs = 200, max_words = 50, avg_w2v = True)
+skopt_dim_avg = [
+    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
+    Real(        low=1e-5, high=0.1, prior='log-uniform', name='dropout'     ),
+    Real(        low=1e-5, high=0.9,  prior="log-uniform", name='l2_regulizer'   ),
+    Integer(     low=2, high = 20,                       name = 'units_site'    ),
+    #Integer(     low=2,    high=10,                         name='pool_size'      ),
+    Integer(     low=1,    high=5,                         name='dense_layers'      ),
+    Integer(     low=10,    high=100,                         name='dense_units'      ),
+    ]
+# CHECK Callback
+avg.set_hp(dropout = 0.00001, l2_regulizer = 0.000042, units_site = 19.0, dense_layers = 3, 
+                    dense_units = 30, learning_rate = 0.000027)
+avg.set_nlp_param()
+avg.set_skopt_dim(skopt_dim_avg)
  
-    # 3nd experiment averaged
-    {'NAME': 'AVG', 'DIM':20, 'VOCAB': -1, 'ALGO': 'sg',
-     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM', 
-                   'attention': False, 'include_counts': True, 'avg_w2v': AVG_W2V, 'init_embedding': True},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.2, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
-                    'l2_regulizer': 0.0001, 'encode_sites': False, 'units_site': 10, 'dense_layers': 3, 
-                    'train_embedding': True, 'dense_units': 20, 'learning_rate':0.0001 } ,
-     'CALLBACK': { 'es': True, 'patience': 5, 'kill_slowstarts': True, 'kill_threshold': 0.5001 }
-     
-    } ,
+    
+# 4th experiment attention
+dim20_att = BaseExperiment('VAR_DIM_Att', batch_size = 1, max_epochs = 15, max_words = 400)
+skopt_dim_20_att = [
+    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
+    Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
+    Integer(     low=2, high=20,                          name='rnn_units'   ),
+    Integer(     low=1,    high=5,                         name='dense_layers'      ),
+    Integer(     low=10,    high=50,                         name='dense_units'      ),
+    Integer(     low=2,    high=20,                         name='att_units'      ),
+    ]
+dim20_att.set_hp()
+dim20_att.set_nlp_param(attention = True)
+dim20_att.set_skopt_dim(skopt_dim_20)
+    
+    
+# 5th experiment embedding varied
+embedding = BaseExperiment('EMBEDDING', batch_size = 1, max_epochs = 15, max_words = 400)
+skopt_dim_embedding = [
+    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
+    Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
+    Integer(     low=5, high=32,                          name='embedding'   ),
+    Integer(     low=2, high=32,                          name='rnn_units'   ),
+    Integer(     low=1,    high=5,                         name='dense_layers'      ),
+    Integer(     low=10,    high=50,                         name='dense_units'      ),
+    ]
+embedding.set_hp()
+embedding.set_nlp_param(init_embedding = False)
+embedding.set_skopt_dim(skopt_dim_embedding)
 
-    # 4th experiment attention
-    {'NAME': 'VAR_DIM_Att', 'DIM':20, 'VOCAB': -1, 'ALGO': 'sg',
-     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM',
-                   'attention': True, 'include_counts': True, 'avg_w2v': AVG_W2V, 'init_embedding': True},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu',
-                    'l2_regulizer': 0.0, 'encode_sites': False, 'units_site': 50, 'dense_layers': 3,
-                    'train_embedding': True, 'dense_units': 30, 'learning_rate':0.0001 } ,
-     'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
 
-    },
-    
-    # 5th experiment embedding varied
-    {'NAME': 'EMBEDDING', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg',
-     'NLP_PARAM': {'cudnn': False, 'batch_norm': False, 'word_encoder': 'LSTM', 
-                   'attention': False, 'include_counts': True, 'avg_w2v': AVG_W2V, 'init_embedding': False},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 20, 'activation_site': 'relu', 
-                    'l2_regulizer': 0.0001, 'encode_sites': False, 'units_site': 10, 'dense_layers': 5, 
-                    'train_embedding': True, 'dense_units': 100, 'learning_rate':0.0001, 'embedding': 32 } ,
-     'CALLBACK': { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
-     
-    } ,
-    
-    """
-    # 2nd experiment - train the embeddings
-    {'NAME': 'TRAIN_EMBEDDINGS', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg' ,
-     'NLP_PARAM': { 'cudnn': False, 'batch_norm': False, 'train_embedding': True, 'word_encoder': 'LSTM', 
-                   'attention': False, 'encode_sites': True, 'include_counts': False},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 50, 'activation_site': 'relu', 
-                    'units_site': 10, 'dense_layers': 3, 'dense_units': 20, 'learning_rate':0.0001 } ,
-     
-    } ,
-    
-    # 3rd experiment - no site encoding
-    {'NAME': 'NO_SITE_ENCODING', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg' ,
-     'NLP_PARAM': { 'cudnn': False, 'batch_norm': False, 'train_embedding': False, 'word_encoder': 'LSTM', 
-                   'attention': False, 'encode_sites': False, 'include_counts': False},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
-                    'units_site': 10, 'dense_layers': 3, 'dense_units': 20, 'learning_rate':0.0001 } ,
-     
-    } ,
-     
-    # 4th experiment - Conv1D instead of GRU
-    
-    {'NAME': 'CONV_1D', 'DIM':50, 'VOCAB': -1, 'ALGO': 'sg'
-     'NLP_PARAM': { 'cudnn': False, 'batch_norm': False, 'train_embedding': False, 'word_encoder': 'LSTM', 
-                   'attention': False, 'encode_sites': True, 'include_counts': False},
-     'HYPERPARAM': { 'dropout':0.0, 'rec_dropout':0.0, 'rnn': GRU, 'rnn_units' : 10, 'activation_site': 'relu', 
-                    'units_site': 10, 'dense_layers': 3, 'dense_units': 20, 'learning_rate':0.0001 } ,
-     
-    } ,
-    """
-    
-    # Decay test: decay = lr / total number of epochs
-]
+# 6th experiment dimred
+dimred = BaseExperiment('DIMRED', batch_size = 1, max_epochs = 15, max_words = 400)
+skot_dim_dimred = [
+    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
+    Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
+    #Integer(     low=5, high=32,                          name='embedding'   ),
+    Integer(     low=2, high=20,                          name='rnn_units'   ),
+    Integer(     low=10, high = 100,                       name = 'units_site'    ),
+    Integer(     low=1,    high=5,                         name='dense_layers'      ),
+    Integer(     low=10,    high=50,                         name='dense_units'      ),
+    #Integer(     low=2,    high=20,                         name='att_units'      ),
+    #Integer(     low=0,    high=1,                         name='encode_sites'      ),
+    ]
+dimred.set_hp(encode_sites = True)
+dimred.set_nlp_param(init_embedding = False)
+dimred.set_skopt_dim(skot_dim_dimred)
+
+experiments = [  nominal, dim20, avg, dim20_att, embedding, dimred  ]
+
+
+
+
