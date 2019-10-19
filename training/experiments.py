@@ -76,7 +76,7 @@ nominal.set_skopt_dim(skopt_dim_nominal)
 
     
 # 2nd experiment lower embedding
-dim20 = BaseExperiment('VAR_DIM', batch_size = 1, max_epochs = 15, max_words = 400)
+dim20 = BaseExperiment('VAR_DIM', batch_size = 4, max_epochs = 15, max_words = 400)
 skopt_dim_20 = [
     Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
     Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),

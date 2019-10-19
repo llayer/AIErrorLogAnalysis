@@ -52,10 +52,10 @@ def train( i_exp = 0, model_param = None, sample_frac = None ):
 if __name__ == "__main__":
     
     print( "Start training" )
-    #train(i_exp = 2)
-    fractions = np.linspace(0.1, 1, 5, endpoint=True)
-    for f in fractions:
-        train(i_exp = 1, sample_frac = f)
+    train(i_exp = 1)
+    #fractions = np.linspace(0.1, 1, 5, endpoint=True)
+    #for f in fractions:
+    #    train(i_exp = 1, sample_frac = f)
 
 
 

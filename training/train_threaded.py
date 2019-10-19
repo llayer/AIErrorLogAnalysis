@@ -36,28 +36,24 @@ def evaluate( o , fold = None):
     mem = psutil.virtual_memory()
     print( 'Memory:', mem[2] )
     
-    # Experiment parameters
-    e = exp.EXPERIMENTS[ i_exp ]
-    out_path = exp.OUTPATH + e['NAME'] + '/'
     
+    # Experiment parameters
+    e = exp.experiments[ i_exp ]
+    out_path = e.outpath + e.name + '/'
     
     # Load the data
-    if 'VAR_LOW' in e['NAME']:
-        path = exp.INPATH + 'input_' + 'VAR_LOW' + '.h5'
-        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_LOW' + '.npy'
-    elif 'VAR_DIM' in e['NAME']:
-        path = exp.INPATH + 'input_' + 'VAR_DIM' + '.h5'
-        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_DIM' + '.npy'
-    elif 'AVG' in e['NAME']:
-        path = exp.INPATH + 'input_' + 'VAR_DIM' + '.h5'
-        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'VAR_DIM' + '.npy'        
+    if 'NOMINAL' in e.name:
+        path = e.inpath + 'input_' + 'NOMINAL' + '.h5'
+        e.nlp_param['embedding_matrix_path'] = e.inpath + 'embedding_matrix_' + 'NOMINAL' + '.npy'
+    elif 'AVG' in e.name:
+        path = e.inpath + 'input_' + 'NOMINAL' + '.h5'
+        e.nlp_param['embedding_matrix_path'] = e.inpath + 'embedding_matrix_' + 'NOMINAL' + '.npy'        
     else:
-        path = exp.INPATH + 'input_' + 'NOMINAL' + '.h5'
-        e['NLP_PARAM']['embedding_matrix_path'] = exp.INPATH + 'embedding_matrix_' + 'NOMINAL' + '.npy'
+        path = e.inpath + 'input_' + 'VAR_DIM' + '.h5'
+        e.nlp_param['embedding_matrix_path'] = e.inpath + 'embedding_matrix_' + 'VAR_DIM' + '.npy'
         
     
-    actionshist, codes, sites = fit_handler.load_data(path, msg_only=exp.MSG_ONLY,
-                                                      sample=exp.SAMPLE, sample_fact = exp.SAMPLE_FACT)
+    actionshist, codes, sites = fit_handler.load_data(path)  
     
     # Setup the fit handler
     handler = fit_handler.FitHandler( exp.MODEL, codes, sites, exp.MAX_WORDS, 
@@ -66,7 +62,7 @@ def evaluate( o , fold = None):
                                      train_on_batch = exp.TRAIN_ON_BATCH, verbose=2 )
     
     # Initial hyper parameters
-    model_param = e['HYPERPARAM']
+    model_param = e.hyperparam
     # Overwrite with bayesian suggestion
     for name, value in o.items():
         model_param[name] = value
@@ -74,19 +70,18 @@ def evaluate( o , fold = None):
     """    
     score = handler.run_training(actionshist, batch_size = exp.BATCH_SIZE, max_epochs = exp.MAX_EPOCHS, 
                                      model_param = model_param)
-    """
-    
-    cvscores = handler.kfold_val( actionshist, model_param = model_param, kfold_splits = exp.FOLDS,
-                               max_epochs = exp.MAX_EPOCHS, batch_size = exp.BATCH_SIZE)
     #value = -1 * score
     #print( value )
     
+    """
+    
+    cvscores = handler.kfold_val( actionshist, model_param = model_param, kfold_splits = e.folds,
+                                  max_epochs = e.max_epochs, batch_size = e.batch_size)
+    
+
     value = -1 * np.mean( cvscores )
     std_dv = np.std( cvscores )
     
-    #X = (o['learning_rate'], o['learning_rate']*2)
-    #value = dummy_func( X , fold = fold)
-    #dummy_func( X , fold = fold)
     res = {
         'result': value,
         'params' : o,

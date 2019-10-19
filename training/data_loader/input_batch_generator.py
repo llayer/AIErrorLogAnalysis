@@ -8,7 +8,7 @@ from keras.utils import to_categorical
 
 class InputBatchGenerator(object):
     
-    def __init__(self, frame, label, codes, sites, pad_dim, batch_size = 1, max_msg = 5, 
+    def __init__(self, frame, label, codes, sites, max_words, batch_size = 1, max_msg = 5, 
                  averaged = False, sequence = False, only_msg = False, cut_front = True):
         
         self.frame = frame
@@ -17,7 +17,7 @@ class InputBatchGenerator(object):
         self.batch_size = batch_size
         self.codes = codes
         self.sites = sites
-        self.pad_dim = pad_dim
+        self.max_words = max_words
         if sequence == False:
             self.max_msg = 1
         else:
@@ -36,14 +36,14 @@ class InputBatchGenerator(object):
     def pad_along_axis(self, array, axis=0):
 
         array = np.array(array)
-        pad_size = self.pad_dim - array.shape[axis]
+        pad_size = self.max_words - array.shape[axis]
         axis_nb = len(array.shape)
 
         if pad_size < 0:
             if self.cut_front == True:
-                return array[-self.pad_dim : ]
+                return array[-self.max_words : ]
             else:
-                return array[ : self.pad_dim ]
+                return array[ : self.max_words ]
 
         npad = [(0, 0) for x in range(axis_nb)]
         npad[axis] = (0, pad_size)
@@ -152,31 +152,29 @@ class InputBatchGenerator(object):
         # Tokens
         if self.averaged == False:
             tokens_key = 'msg_encoded'
-            self.pad_dim = 1
-            msg_t = []
-            for key in batch[tokens_key]:
-                for msg in key:
+            pad_dim = 1
+            for messages in batch[tokens_key]:
+                for msg in messages:
                     if isinstance(msg, (list,)):
-                        if len(msg) > self.pad_dim:
-                            msg_t = msg
-                            self.pad_dim = len(msg)
+                        if len(msg) > pad_dim:
+                            pad_dim = len(msg)
                         
-            if self.pad_dim > 400:
-                self.pad_dim = 400
+            if pad_dim > self.max_words:
+                pad_dim = self.max_words
         else:
             tokens_key = 'avg'
        
         
-        #print( self.pad_dim )
+        #print( self.max_words )
         #print( msg )
         
         # Error site matrix
         self.error_site_counts = np.zeros((chunk_size, self.unique_codes, self.unique_sites, 2), dtype=np.int32)
         
         if self.sequence == True:
-            dim = (chunk_size, self.unique_codes, self.unique_sites, self.max_msg, self.pad_dim)
+            dim = (chunk_size, self.unique_codes, self.unique_sites, self.max_msg, pad_dim)
         else:
-            dim = (chunk_size, self.unique_codes, self.unique_sites, self.pad_dim)    
+            dim = (chunk_size, self.unique_codes, self.unique_sites, pad_dim)    
         
         
         # Error message matrix
@@ -188,7 +186,7 @@ class InputBatchGenerator(object):
         if self.only_msg == False:
             #print( np.count_nonzero(self.error_site_tokens) )
             #self.error_site_tokens = np.reshape(
-            return [self.error_site_tokens.reshape((chunk_size, self.unique_codes * self.unique_sites, self.pad_dim)) , 
+            return [self.error_site_tokens.reshape((chunk_size, self.unique_codes * self.unique_sites, pad_dim)) , 
                     self.error_site_counts]   
         else:
             return self.error_site_tokens

@@ -188,14 +188,14 @@ def run_opt(i_exp):
 
 
     # Experiment parameters
-    e = exp.EXPERIMENTS[ i_exp ]
+    e = exp.experiments[ i_exp ]
     overwrite = False
-    path = exp.OUTPATH + e['NAME'] + '/'
+    path = e.outpath + e.name + '/'
     create_dir(path, overwrite)
     
     
     #dim = NLP.get_skopt_dimensions()
-    dim = exp.SKOPT_DIM
+    dim = e.skopt_dim
     print( dim )
     
     names = [var.name for var in dim]
@@ -252,7 +252,7 @@ def run_opt(i_exp):
         
 if __name__ == "__main__":
     
-    run_opt(4)
+    run_opt(5)
         
         
 
