@@ -1,11 +1,12 @@
-# AIErrorLogAnalysis
+# AIErrorLogAnalysis with Natural Language Processing
 Repository for the analysis of log files of failing workflows of the CMS Experiment.
-The goal is to predict the operator's actions for failing workflows stored in the [WTC Console](https://github.com/CMSCompOps/WorkflowWebTools).
+The goal is to predict the operator's actions for failing workflows stored in the [WTC Console](https://github.com/CMSCompOps/WorkflowWebTools). The input for the machine learning are the error logs
+of the failing jobs and information about the frequency of the error per site.
 
 
 ## DAQ of the error messages
 
-To run the analysis of the [WMArchive](https://github.com/dmwm/WMArchive) entries with Apache Spark on SWAN run the notebook [filter_wm.ipynb](https://github.com/llayer/AIErrorLogAnalysis/blob/master/spark/filter_wm.ipynb)
+To run the analysis of the [WMArchive](https://github.com/dmwm/WMArchive) entries with Apache Spark on SWAN and filter the error log snippets run the notebook [filter_wm.ipynb](https://github.com/llayer/AIErrorLogAnalysis/blob/master/spark/filter_wm.ipynb).
 The recommended options for SWAN are:
 ```
 Software Stack: Bleeding Edge
