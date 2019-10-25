@@ -1,4 +1,4 @@
-# AIErrorLogAnalysis with Natural Language Processing
+# Error log analysis with Natural Language Processing
 Repository for the analysis of log files of failing workflows of the CMS Experiment.
 The goal is to predict the operator's actions for failing workflows stored in the [WTC Console](https://github.com/CMSCompOps/WorkflowWebTools). The input for the machine learning are the error logs
 of the failing jobs and information about the frequency of the error per site.
