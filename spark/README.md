@@ -7,3 +7,4 @@ Software Stack: Bleeding Edge
 Memory: 10Gb
 Spark cluster: General Purpose (Analytix)
 ```
+The output is saved in pandas frames.
