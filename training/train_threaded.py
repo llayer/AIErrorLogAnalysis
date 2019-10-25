@@ -56,10 +56,10 @@ def evaluate( o , fold = None):
     actionshist, codes, sites = fit_handler.load_data(path)  
     
     # Setup the fit handler
-    handler = fit_handler.FitHandler( exp.MODEL, codes, sites, exp.MAX_WORDS, 
-                                     exp.GEN_PARAM, pruning_mode = exp.PRUNING,
-                                     model_args = e['NLP_PARAM'], callback_args = e['CALLBACK'],
-                                     train_on_batch = exp.TRAIN_ON_BATCH, verbose=2 )
+    handler = fit_handler.FitHandler( e.model, codes, sites, e.max_words, 
+                                     e.gen_param, pruning_mode = e.pruning,
+                                     model_args = e.nlp_param, callback_args = e.callback,
+                                     train_on_batch = e.train_on_batch, verbose=2 )
     
     # Initial hyper parameters
     model_param = e.hyperparam

@@ -38,7 +38,7 @@ def train( i_exp = 0, model_param = None, sample_frac = None ):
     handler = fit_handler.FitHandler( e.model, codes, sites, e.max_words, 
                                      e.gen_param, pruning_mode = e.pruning,
                                      model_args = e.nlp_param, callback_args = e.callback,
-                                     train_on_batch = e.train_on_batch, verbose=1 )
+                                     train_on_batch = e.train_on_batch, verbose=2 )
 
     if model_param is None:
         model_param = e.hyperparam
@@ -52,7 +52,7 @@ def train( i_exp = 0, model_param = None, sample_frac = None ):
 if __name__ == "__main__":
     
     print( "Start training" )
-    train(i_exp = 1)
+    train(i_exp = 4 , sample_frac = 0.125)
     #fractions = np.linspace(0.1, 1, 5, endpoint=True)
     #for f in fractions:
     #    train(i_exp = 1, sample_frac = f)

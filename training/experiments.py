@@ -45,12 +45,12 @@ class BaseExperiment(object):
         
     def set_hp(self, dropout = 0.0, rec_dropout = 0.0, rnn = GRU, rnn_units = 20, activation_site = 'relu', 
                     l2_regulizer = 0.0001, encode_sites = False, units_site = 10, dense_layers = 5, 
-                    train_embedding = True, dense_units = 50, learning_rate = 0.0001):
+                    train_embedding = True, dense_units = 50, embedding = 20, learning_rate = 0.0001):
         
         self.hyperparam = { 'dropout': dropout, 'rec_dropout':rec_dropout, 'rnn': rnn, 'rnn_units' : rnn_units,
                            'activation_site': activation_site, 'l2_regulizer': l2_regulizer, 'encode_sites': encode_sites, 
                            'units_site': units_site, 'dense_layers': dense_layers, 'train_embedding': train_embedding, 
-                           'dense_units': dense_units,  'learning_rate': learning_rate }
+                           'dense_units': dense_units, 'embedding': embedding, 'learning_rate': learning_rate }
         
     def set_skopt_dim(self, skopt_dim):
         
@@ -76,7 +76,7 @@ nominal.set_skopt_dim(skopt_dim_nominal)
 
     
 # 2nd experiment lower embedding
-dim20 = BaseExperiment('VAR_DIM', batch_size = 4, max_epochs = 15, max_words = 400)
+dim20 = BaseExperiment('VAR_DIM', batch_size = 1, max_epochs = 12, max_words = 400)
 skopt_dim_20 = [
     Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
     Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
@@ -125,7 +125,7 @@ dim20_att.set_skopt_dim(skopt_dim_20)
     
     
 # 5th experiment embedding varied
-embedding = BaseExperiment('EMBEDDING', batch_size = 1, max_epochs = 15, max_words = 400)
+embedding = BaseExperiment('EMBEDDING', batch_size = 1, max_epochs = 12, max_words = 400)
 skopt_dim_embedding = [
     Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
     Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
@@ -134,25 +134,25 @@ skopt_dim_embedding = [
     Integer(     low=1,    high=5,                         name='dense_layers'      ),
     Integer(     low=10,    high=50,                         name='dense_units'      ),
     ]
-embedding.set_hp()
+embedding.set_hp(learning_rate = 0.000067, dropout = 0.003023, embedding = 16, rnn_units = 17, 
+                 dense_layers = 4, dense_units = 33)
 embedding.set_nlp_param(init_embedding = False)
 embedding.set_skopt_dim(skopt_dim_embedding)
 
 
 # 6th experiment dimred
-dimred = BaseExperiment('DIMRED', batch_size = 1, max_epochs = 15, max_words = 400)
+dimred = BaseExperiment('DIMRED', batch_size = 4, max_epochs = 12, max_words = 400)
 skot_dim_dimred = [
     Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
     Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
-    #Integer(     low=5, high=32,                          name='embedding'   ),
+    Integer(     low=5, high=32,                          name='embedding'   ),
     Integer(     low=2, high=20,                          name='rnn_units'   ),
     Integer(     low=10, high = 100,                       name = 'units_site'    ),
     Integer(     low=1,    high=5,                         name='dense_layers'      ),
     Integer(     low=10,    high=50,                         name='dense_units'      ),
-    #Integer(     low=2,    high=20,                         name='att_units'      ),
-    #Integer(     low=0,    high=1,                         name='encode_sites'      ),
+    Integer(     low=0,    high=1,                         name='encode_sites'      ),
     ]
-dimred.set_hp(encode_sites = True)
+dimred.set_hp()
 dimred.set_nlp_param(init_embedding = False)
 dimred.set_skopt_dim(skot_dim_dimred)
 

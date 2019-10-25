@@ -233,7 +233,7 @@ def run_opt(i_exp):
         dimensions=dim,
     )
 
-    m = manager(n = 3,
+    m = manager(n = 5,
                 skobj = o,
                 iterations = run_for,
                 func = use_func,
