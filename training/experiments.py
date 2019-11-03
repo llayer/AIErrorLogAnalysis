@@ -32,7 +32,7 @@ class BaseExperiment(object):
         self.gen_param['cut_front'] = True
         
         # Callback
-        self.callback = { 'es': True, 'patience': 3, 'kill_slowstarts': True, 'kill_threshold': 0.51 }
+        self.callback = { 'es': True, 'patience': 3, 'kill_slowstarts': False, 'kill_threshold': 0.51 }
     
     
     def set_nlp_param(self, attention = False, cudnn = False, batch_norm = False, word_encoder = 'LSTM', 
@@ -152,7 +152,11 @@ skot_dim_dimred = [
     Integer(     low=10,    high=50,                         name='dense_units'      ),
     Integer(     low=0,    high=1,                         name='encode_sites'      ),
     ]
-dimred.set_hp()
+
+dimred.set_hp(dropout = 0.001000, units_site = 100, dense_layers = 5, embedding = 5, rnn_units = 20, 
+                    dense_units = 50, encode_sites = 1, learning_rate = 0.000010) #BEST
+#dimred.set_hp(dropout = 0., units_site = 100, dense_layers = 3, embedding = 20, rnn_units = 10, 
+#                    dense_units = 50, encode_sites = 0, learning_rate = 0.001) # nnlo
 dimred.set_nlp_param(init_embedding = False)
 dimred.set_skopt_dim(skot_dim_dimred)
 
