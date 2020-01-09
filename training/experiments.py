@@ -141,16 +141,16 @@ embedding.set_skopt_dim(skopt_dim_embedding)
 
 
 # 6th experiment dimred
-dimred = BaseExperiment('DIMRED', batch_size = 4, max_epochs = 12, max_words = 400)
+dimred = BaseExperiment('DIMRED', batch_size = 4, max_epochs = 20, max_words = 400)
 skot_dim_dimred = [
-    Real(        low=1e-5, high=1e-3, prior='log-uniform', name='learning_rate'     ),
-    Real(        low=1e-3, high=0.1, prior='log-uniform', name='dropout'     ),
-    Integer(     low=5, high=32,                          name='embedding'   ),
-    Integer(     low=2, high=20,                          name='rnn_units'   ),
+    Real(        low=1e-6, high=1e-4, prior='log-uniform', name='learning_rate'     ),
+    Real(        low=1e-5, high=0.1, prior='log-uniform', name='dropout'     ),
+    Integer(     low=3, high=20,                          name='embedding'   ),
+    Integer(     low=10, high=32,                          name='rnn_units'   ),
     Integer(     low=10, high = 100,                       name = 'units_site'    ),
-    Integer(     low=1,    high=5,                         name='dense_layers'      ),
-    Integer(     low=10,    high=50,                         name='dense_units'      ),
-    Integer(     low=0,    high=1,                         name='encode_sites'      ),
+    Integer(     low=1,    high=8,                         name='dense_layers'      ),
+    Integer(     low=10,    high=100,                         name='dense_units'      ),
+    #Integer(     low=0,    high=1,                         name='encode_sites'      ),
     ]
 
 dimred.set_hp(dropout = 0.001000, units_site = 100, dense_layers = 5, embedding = 5, rnn_units = 20, 
